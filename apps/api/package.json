@@ -1,0 +1,42 @@
+{
+  "name": "@vechart/api",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "start:dev": "nest start --watch",
+    "build": "nest build",
+    "start": "node dist/main.js",
+    "lint": "tsc --noEmit -p tsconfig.json",
+    "db:init": "node ../../scripts/init-remote-db.mjs"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.866.0",
+    "@nestjs/common": "^10.4.2",
+    "@nestjs/config": "^3.2.3",
+    "@nestjs/core": "^10.4.2",
+    "@nestjs/jwt": "^10.2.0",
+    "@nestjs/passport": "^10.0.3",
+    "@nestjs/platform-express": "^10.4.2",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.1",
+    "cookie-parser": "^1.4.7",
+    "passport": "^0.7.0",
+    "passport-jwt": "^4.0.1",
+    "pg": "^8.16.3",
+    "pptxgenjs": "^4.0.1",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.1",
+    "sharp": "^0.34.5"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "^10.4.5",
+    "@nestjs/schematics": "^10.1.4",
+    "@nestjs/testing": "^10.4.2",
+    "@types/cookie-parser": "^1.4.8",
+    "@types/express": "^5.0.1",
+    "@types/node": "^22.13.10",
+    "@types/passport-jwt": "^4.0.1",
+    "@types/pg": "^8.15.5",
+    "typescript": "^5.8.2"
+  }
+}
