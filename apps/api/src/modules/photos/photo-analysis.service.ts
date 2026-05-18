@@ -331,6 +331,16 @@ export class PhotoAnalysisService implements OnModuleInit {
     };
   }
 
+  private readonly IMAGE_BUDGET = 600 * 1024;
+
+  private readonly COMPRESSION_ATTEMPTS: Array<{ width: number; quality: number; chromaSubsampling: string }> = [
+    { width: 2560, quality: 90, chromaSubsampling: '4:4:4' },
+    { width: 2560, quality: 80, chromaSubsampling: '4:4:4' },
+    { width: 2048, quality: 80, chromaSubsampling: '4:4:4' },
+    { width: 2048, quality: 65, chromaSubsampling: '4:4:4' },
+    { width: 1568, quality: 55, chromaSubsampling: '4:2:0' }
+  ];
+
   private async fetchImageBase64(imageUrl: string) {
     try {
       const response = await fetch(imageUrl);
@@ -341,13 +351,45 @@ export class PhotoAnalysisService implements OnModuleInit {
       const originalSize = arrayBuffer.byteLength;
       this.logger.log(`Image downloaded: ${originalSize} bytes from ${imageUrl}`);
 
-      const compressed = await sharp(arrayBuffer)
-        .resize({ width: 1568, height: 1568, fit: 'inside', withoutEnlargement: true })
-        .jpeg({ quality: 80 })
-        .toBuffer();
+      let bestResult: { data: string; mediaType: string; quality: number; width: number; size: number } | null = null;
 
-      this.logger.log(`Image compressed: ${originalSize} -> ${compressed.length} bytes`);
-      return { data: compressed.toString('base64'), mediaType: 'image/jpeg' };
+      for (const attempt of this.COMPRESSION_ATTEMPTS) {
+        const compressed = await sharp(arrayBuffer)
+          .resize({ width: attempt.width, height: attempt.width, fit: 'inside', withoutEnlargement: true })
+          .jpeg({ quality: attempt.quality, chromaSubsampling: attempt.chromaSubsampling as '4:4:4' | '4:2:0' })
+          .toBuffer();
+
+        if (compressed.length <= this.IMAGE_BUDGET) {
+          bestResult = {
+            data: compressed.toString('base64'),
+            mediaType: 'image/jpeg',
+            quality: attempt.quality,
+            width: attempt.width,
+            size: compressed.length
+          };
+          break;
+        }
+      }
+
+      if (!bestResult) {
+        const compressed = await sharp(arrayBuffer)
+          .resize({ width: 1024, height: 1024, fit: 'inside', withoutEnlargement: true })
+          .jpeg({ quality: 45 })
+          .toBuffer();
+        bestResult = {
+          data: compressed.toString('base64'),
+          mediaType: 'image/jpeg',
+          quality: 45,
+          width: 1024,
+          size: compressed.length
+        };
+      }
+
+      this.logger.log(
+        `Image compressed: ${originalSize} -> ${bestResult.size} bytes ` +
+        `(quality=${bestResult.quality}, width=${bestResult.width})`
+      );
+      return { data: bestResult.data, mediaType: bestResult.mediaType };
     } catch (err) {
       this.logger.warn(`Failed to fetch/compress image: ${err instanceof Error ? err.message : String(err)}`);
       return null;
