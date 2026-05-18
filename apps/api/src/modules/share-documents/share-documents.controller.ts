@@ -37,12 +37,12 @@ export class ShareDocumentsController {
   @Post(':shareId/export-pptx')
   async exportPptx(
     @Param('shareId') shareId: string,
-    @Query('template') template: 'default' | 'sales' | undefined,
+    @Query('template') template: 'default' | 'sales' | 'spec' | undefined,
     @Res() response: Response
   ) {
     const { buffer, fileName } = await this.shareDocumentsService.exportPptxBuffer(
       shareId,
-      template === 'sales' ? 'sales' : 'default'
+      template === 'sales' ? 'sales' : template === 'spec' ? 'spec' : 'default'
     );
     response.setHeader(
       'Content-Type',

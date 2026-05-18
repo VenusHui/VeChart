@@ -9,7 +9,7 @@ import { ShareDocument } from '@/lib/types';
 export function ShareDocumentView({ shareId }: { shareId: string }) {
   const [document, setDocument] = useState<ShareDocument | null>(null);
   const [message, setMessage] = useState('');
-  const [exportingTemplate, setExportingTemplate] = useState<'default' | 'sales' | null>(null);
+  const [exportingTemplate, setExportingTemplate] = useState<'default' | 'sales' | 'spec' | null>(null);
 
   useEffect(() => {
     void api.getShareDocument(shareId).then(setDocument);
@@ -30,6 +30,24 @@ export function ShareDocumentView({ shareId }: { shareId: string }) {
           <p className="muted">{document.description || '固定模板分享文档'}</p>
         </div>
         <div className="row">
+          <button
+            className="button button-secondary"
+            disabled={exportingTemplate !== null}
+            onClick={async () => {
+              setExportingTemplate('spec');
+              setMessage('正在生成产品规格 PPTX，请稍候...');
+              try {
+                await api.exportPptx(document.id, `${document.title}-产品规格.pptx`, 'spec');
+                setMessage('产品规格 PPTX 导出已开始下载。');
+              } catch (error) {
+                setMessage(error instanceof Error ? error.message : '产品规格导出失败。');
+              } finally {
+                setExportingTemplate(null);
+              }
+            }}
+          >
+            {exportingTemplate === 'spec' ? '正在生成规格模板...' : '导出规格模板 PPTX'}
+          </button>
           <button
             className="button button-secondary"
             disabled={exportingTemplate !== null}

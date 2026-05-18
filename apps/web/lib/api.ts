@@ -109,7 +109,7 @@ export const api = {
   exportPptx: async (
     shareId: string,
     fileName = `share-${shareId}.pptx`,
-    template: 'default' | 'sales' = 'default'
+    template: 'default' | 'sales' | 'spec' = 'default'
   ) => {
     const query = new URLSearchParams({ template });
     const response = await fetch(

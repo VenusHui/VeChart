@@ -33,7 +33,7 @@ export class ShareDocumentsService {
     };
   }
 
-  async exportPptxBuffer(shareId: string, template: 'default' | 'sales' = 'default') {
+  async exportPptxBuffer(shareId: string, template: 'default' | 'sales' | 'spec' = 'default') {
     const shareDocument = await this.repository.getShareDocument(shareId);
     const pptx = new PPTXGenJS();
     pptx.layout = 'LAYOUT_WIDE';
@@ -97,6 +97,29 @@ export class ShareDocumentsService {
         color: '8D5E49',
         fontSize: 12
       });
+    } else if (template === 'spec') {
+      const titleSlide = pptx.addSlide();
+      titleSlide.background = { color: 'FFFFFF' };
+      titleSlide.addText(shareDocument.title, {
+        x: 0.67,
+        y: 2.8,
+        w: 11.5,
+        h: 1.4,
+        color: '000000',
+        fontFace: '微软雅黑',
+        fontSize: 36
+      });
+      if (shareDocument.description) {
+        titleSlide.addText(shareDocument.description, {
+          x: 0.67,
+          y: 4.3,
+          w: 11,
+          h: 0.6,
+          color: '5F5F5F',
+          fontFace: '微软雅黑',
+          fontSize: 14
+        });
+      }
     } else {
       const titleSlide = pptx.addSlide();
       titleSlide.background = { color: '0F2A43' };
@@ -143,7 +166,113 @@ export class ShareDocumentsService {
       const imageData = await this.toDataUri(item.snapshot.imageUrl);
       const slide = pptx.addSlide();
 
-      if (template === 'sales') {
+      if (template === 'spec') {
+        slide.background = { color: 'FFFFFF' };
+
+        slide.addText(item.snapshot.productName || `产品 ${index + 1}`, {
+          x: 0.4,
+          y: 0.57,
+          w: 8.5,
+          h: 0.36,
+          color: '000000',
+          bold: true,
+          fontFace: '微软雅黑',
+          fontSize: 24
+        });
+
+        if (imageData) {
+          slide.addImage({
+            data: imageData,
+            x: 0.4,
+            y: 1.2,
+            w: 8.7,
+            h: 4.0,
+            sizing: { type: 'contain', x: 0.4, y: 1.2, w: 8.7, h: 4.0 }
+          });
+        }
+
+        slide.addText('产品 Spec', {
+          x: 0.4,
+          y: 5.32,
+          w: 2.5,
+          h: 0.3,
+          color: '000000',
+          bold: true,
+          fontFace: 'Speedee',
+          fontSize: 20
+        });
+
+        const headerOpts = {
+          fill: { color: 'DB0007' },
+          color: 'FFFFFF',
+          bold: true,
+          fontSize: 12,
+          fontFace: '微软雅黑',
+          align: 'center' as const,
+          valign: 'middle' as const
+        };
+        const dataOpts = {
+          fill: { color: 'FFFFFF' },
+          color: '000000',
+          fontSize: 14,
+          fontFace: '微软雅黑',
+          align: 'center' as const,
+          valign: 'middle' as const
+        };
+        const border = { pt: 0.5, color: 'DB0007' };
+
+        const tableRows = [
+          [
+            { text: '主体材质', options: { ...headerOpts, border } },
+            { text: 'MOQ', options: { ...headerOpts, border } },
+            { text: '市场售价', options: { ...headerOpts, border } },
+            { text: '预估成本', options: { ...headerOpts, border } }
+          ],
+          [
+            { text: item.snapshot.material || '-', options: { ...dataOpts, border } },
+            { text: String(item.snapshot.moq ?? '-'), options: { ...dataOpts, border } },
+            { text: item.snapshot.marketPrice != null ? `¥${item.snapshot.marketPrice}` : '-', options: { ...dataOpts, border } },
+            { text: item.snapshot.estimatedCost != null ? `¥${item.snapshot.estimatedCost}` : '-', options: { ...dataOpts, border } }
+          ]
+        ];
+
+        slide.addTable(tableRows, {
+          x: 0.4,
+          y: 5.78,
+          w: 12.4,
+          colW: [3.1, 3.1, 3.1, 3.1],
+          rowH: [0.48, 0.67],
+          border: { pt: 0.5, color: 'DB0007' }
+        });
+
+        const linkY = 7.0;
+        slide.addText(`产品链接: ${item.snapshot.productUrl || '-'}`, {
+          x: 0.4,
+          y: linkY,
+          w: 12.4,
+          h: 0.2,
+          color: '5F5F5F',
+          fontSize: 8
+        });
+        slide.addText(`1688链接: ${item.snapshot.product1688Url || '-'}`, {
+          x: 0.4,
+          y: linkY + 0.17,
+          w: 12.4,
+          h: 0.2,
+          color: '5F5F5F',
+          fontSize: 8
+        });
+        if (item.snapshot.note) {
+          slide.addText(`备注: ${item.snapshot.note}`, {
+            x: 0.4,
+            y: linkY + 0.34,
+            w: 12.4,
+            h: 0.2,
+            color: '5F5F5F',
+            fontSize: 8
+          });
+        }
+      } else if (template === 'sales') {
         slide.background = { color: 'FCF7F2' };
         slide.addShape(pptx.ShapeType.rect, {
           x: 0,
@@ -392,7 +521,7 @@ export class ShareDocumentsService {
 
     return {
       buffer,
-      fileName: `${sanitizeFileName(shareDocument.title)}${template === 'sales' ? '-sales' : ''}.pptx`
+      fileName: `${sanitizeFileName(shareDocument.title)}${template === 'sales' ? '-sales' : template === 'spec' ? '-spec' : ''}.pptx`
     };
   }
 
