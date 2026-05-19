@@ -9,7 +9,7 @@ import { ShareDocument } from '@/lib/types';
 export function ShareDocumentView({ shareId }: { shareId: string }) {
   const [document, setDocument] = useState<ShareDocument | null>(null);
   const [message, setMessage] = useState('');
-  const [exportingTemplate, setExportingTemplate] = useState<'default' | 'sales' | 'spec' | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     void api.getShareDocument(shareId).then(setDocument);
@@ -31,62 +31,26 @@ export function ShareDocumentView({ shareId }: { shareId: string }) {
         </div>
         <div className="row">
           <button
-            className="button button-secondary"
-            disabled={exportingTemplate !== null}
+            className="button"
+            disabled={exporting}
             onClick={async () => {
-              setExportingTemplate('spec');
-              setMessage('正在生成产品规格 PPTX，请稍候...');
-              try {
-                await api.exportPptx(document.id, `${document.title}-产品规格.pptx`, 'spec');
-                setMessage('产品规格 PPTX 导出已开始下载。');
-              } catch (error) {
-                setMessage(error instanceof Error ? error.message : '产品规格导出失败。');
-              } finally {
-                setExportingTemplate(null);
-              }
-            }}
-          >
-            {exportingTemplate === 'spec' ? '正在生成规格模板...' : '导出规格模板 PPTX'}
-          </button>
-          <button
-            className="button button-secondary"
-            disabled={exportingTemplate !== null}
-            onClick={async () => {
-              setExportingTemplate('default');
+              setExporting(true);
               setMessage('正在生成 PPTX，请稍候...');
               try {
-                await api.exportPptx(document.id, `${document.title}.pptx`, 'default');
+                await api.exportPptx(document.id, `${document.title}.pptx`);
                 setMessage('PPTX 导出已开始下载。');
               } catch (error) {
                 setMessage(error instanceof Error ? error.message : 'PPTX 导出失败。');
               } finally {
-                setExportingTemplate(null);
+                setExporting(false);
               }
             }}
           >
-            {exportingTemplate === 'default' ? '正在生成 PPTX...' : '导出 PPTX'}
-          </button>
-          <button
-            className="button button-secondary"
-            disabled={exportingTemplate !== null}
-            onClick={async () => {
-              setExportingTemplate('sales');
-              setMessage('正在生成销售模板 PPTX，请稍候...');
-              try {
-                await api.exportPptx(document.id, `${document.title}-销售模板.pptx`, 'sales');
-                setMessage('销售模板 PPTX 导出已开始下载。');
-              } catch (error) {
-                setMessage(error instanceof Error ? error.message : '销售模板导出失败。');
-              } finally {
-                setExportingTemplate(null);
-              }
-            }}
-          >
-            {exportingTemplate === 'sales' ? '正在生成销售模板...' : '导出销售模板 PPTX'}
+            {exporting ? '正在生成 PPTX...' : '导出 PPTX'}
           </button>
           <button
             className="button"
-            disabled={exportingTemplate !== null}
+            disabled={exporting}
             onClick={async () => {
               const result = await api.exportPdf(document.id);
               setMessage(result.message);

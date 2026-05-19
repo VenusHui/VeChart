@@ -108,12 +108,10 @@ export const api = {
     }),
   exportPptx: async (
     shareId: string,
-    fileName = `share-${shareId}.pptx`,
-    template: 'default' | 'sales' | 'spec' = 'default'
+    fileName = `share-${shareId}.pptx`
   ) => {
-    const query = new URLSearchParams({ template });
     const response = await fetch(
-      `${getApiBaseUrl()}/api/share-documents/${shareId}/export-pptx?${query.toString()}`,
+      `${getApiBaseUrl()}/api/share-documents/${shareId}/export-pptx`,
       {
         method: 'POST',
         credentials: 'include'

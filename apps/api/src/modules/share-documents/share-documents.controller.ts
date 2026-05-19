@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Res, UseGuards } from '@nestjs/common';
 import { Response } from 'express';
 
 import { CurrentUser } from '../auth/current-user.decorator';
@@ -37,12 +37,10 @@ export class ShareDocumentsController {
   @Post(':shareId/export-pptx')
   async exportPptx(
     @Param('shareId') shareId: string,
-    @Query('template') template: 'default' | 'sales' | 'spec' | undefined,
     @Res() response: Response
   ) {
     const { buffer, fileName } = await this.shareDocumentsService.exportPptxBuffer(
-      shareId,
-      template === 'sales' ? 'sales' : template === 'spec' ? 'spec' : 'default'
+      shareId
     );
     response.setHeader(
       'Content-Type',
