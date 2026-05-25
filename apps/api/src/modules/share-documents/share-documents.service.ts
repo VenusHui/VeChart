@@ -76,27 +76,17 @@ export class ShareDocumentsService {
         margin: 0
       });
 
-      // Main product image on left — aspect-ratio-preserved within (0.40, 0.90)", max 8.7"x4.0"
+      // Product image on right — matching template reference image position (9.37, 1.88)"
       if (imageInfo) {
-        const mainAreaW = 8.7;
-        const mainAreaH = 4.0;
-        const mainScale = Math.min(mainAreaW / imageInfo.width, mainAreaH / imageInfo.height, 1.0);
-        const mainW = imageInfo.width * mainScale;
-        const mainH = imageInfo.height * mainScale;
-        slide.addImage({
-          data: imageInfo.dataUri,
-          x: 0.40, y: 0.90,
-          w: mainW, h: mainH,
-          sizing: { type: 'contain', w: mainW, h: mainH }
-        });
-
-        // Reference image on right — "产品参考" area at (9.37, 1.88)", max 3.27"x3.75"
+        // "产品参考：" label
         slide.addText('产品参考：', {
           x: 9.40, y: 1.42, w: 3.27, h: 0.30,
           color: '000000',
           fontFace: 'Microsoft YaHei', fontSize: 12,
           margin: 0
         });
+
+        // Reference image on right — aspect-ratio-preserved within max 3.27"x3.75"
         const refAreaW = 3.27;
         const refAreaH = 3.75;
         const refScale = Math.min(refAreaW / imageInfo.width, refAreaH / imageInfo.height, 1.0);

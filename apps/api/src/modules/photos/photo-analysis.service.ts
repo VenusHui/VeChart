@@ -285,7 +285,10 @@ export class PhotoAnalysisService implements OnModuleInit {
       .replace(/```\s*/g, '')
       .trim();
 
-    const parsed = JSON.parse(cleaned) as Record<string, unknown>;
+    const parsed = this.parseJsonObject(cleaned);
+    if (!parsed) {
+      throw new Error('Claude analysis response contained no valid JSON object');
+    }
 
     const nestedMeta = (parsed.suggestedMetadata as Record<string, unknown> | undefined) ?? {};
 
@@ -852,6 +855,45 @@ export class PhotoAnalysisService implements OnModuleInit {
 
   private roundCurrency(value: number) {
     return Math.round(value * 100) / 100;
+  }
+
+  private parseJsonObject(text: string): Record<string, unknown> | null {
+    const start = text.indexOf('{');
+    if (start === -1) return null;
+
+    let depth = 0;
+    let inString = false;
+    let escape = false;
+
+    for (let i = start; i < text.length; i++) {
+      const ch = text[i];
+      if (escape) {
+        escape = false;
+        continue;
+      }
+      if (ch === '\\' && inString) {
+        escape = true;
+        continue;
+      }
+      if (ch === '"' && !escape) {
+        inString = !inString;
+        continue;
+      }
+      if (inString) continue;
+      if (ch === '{') depth++;
+      else if (ch === '}') {
+        depth--;
+        if (depth === 0) {
+          try {
+            return JSON.parse(text.slice(start, i + 1)) as Record<string, unknown>;
+          } catch {
+            return null;
+          }
+        }
+      }
+    }
+
+    return null;
   }
 
   private parseNumber(value: unknown): number | null {
