@@ -130,6 +130,11 @@ function makeMetadata(
     marketPrice,
     estimatedCost,
     moq,
-    note: '首版示例数据'
+    note: '首版示例数据',
+    estimatedSize: null,
+    samplingTime: null,
+    moldRequired: null,
+    moldTime: null,
+    bulkProductionTime: null
   };
 }

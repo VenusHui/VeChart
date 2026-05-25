@@ -61,12 +61,16 @@ const COST_METHODOLOGY = [
   '3. 标准损耗率：亚克力切割/印刷5-8%，金属件2-3%，人工组装2-4%，包装1-2%。',
   '4. 先拆BOM→估裸价→加损耗→加人工→加包装→分摊固定成本→加物流税费→分批量汇总。',
   '5. 常见参考：亚克力挂件大批量¥1.5-4/小批量¥4-8，醋酸抓夹大批量¥5-18/小批量¥12-35，马口铁徽章大批量¥0.5-1.5/小批量¥2-4。',
-  '6. 零售价marketPrice通常为综合成本的2-5倍。不确定时宁低勿高，设为null的字段不要编造。'
+  '6. 零售价marketPrice通常为综合成本的2-5倍。不确定时宁低勿高，设为null的字段不要编造。',
+  '7. 尺寸估算：根据图片中参照物（手掌、桌面、常见物品）估算产品大致尺寸，格式如"4cm*4cm"或"19cm×9cm"（单位cm）。不确定时设为null，不要编造。',
+  '8. 是否开模（moldRequired）：亚克力件、金属件、合金件、注塑件、树脂件通常需要开模（"是"）；布料缝制、帆布、纸质、硅胶成型通常不需要开模（"否"）。结合产品类型和材质判断。',
+  '9. 打样/生产时间估算：无需开模产品打样3-7天，大货15-25天；需开模产品打样15-20天，开模7-30天（简单模具7-15天，复杂模具15-45天），大货25-60天。批量越大交货时间越长。',
+  '10. MOQ与价格关系：MOQ越大单价越低。例如MOQ=500时单价可能比MOQ=100时低15-25%，MOQ=5000时可能再低10-15%。estimatedCostMin应对应大批量、estimatedCostMax应对应小批量。'
 ].join('\n');
 
 const OUTPUT_SCHEMA = [
   '输出 JSON（不要markdown）：',
-  '{"confidence":"low|medium|high","reasoningSummary":"分析依据","sources":[],"productName":"商品名","material":"材质","productUrl":null,"product1688Url":null,"marketPrice":零售价数字,"estimatedCost":中批量成本,"estimatedCostMin":大批量成本,"estimatedCostMax":小批量成本,"moq":起订量,"note":"备注","bomBreakdown":[{"part":"部件","material":"材质","unitCost":单价,"lossRate":"损耗率"}],"costBreakdown":{"materialCost":物料成本,"laborCost":人工,"packagingCost":包装,"fixedCostPerUnit":固定分摊,"logisticsCost":物流,"taxCost":税费},"suggestedMetadata":{"productName":"同上","material":"同上","productUrl":null,"product1688Url":null,"marketPrice":"同上","estimatedCost":"同上","estimatedCostMin":"同上","estimatedCostMax":"同上","moq":"同上","note":"同上"}}'
+  '{"confidence":"low|medium|high","reasoningSummary":"分析依据","sources":[],"productName":"商品名","material":"材质","productUrl":null,"product1688Url":null,"marketPrice":零售价数字,"estimatedCost":中批量成本,"estimatedCostMin":大批量成本,"estimatedCostMax":小批量成本,"moq":起订量,"note":"备注","estimatedSize":"预估尺寸如4cm*4cm","samplingTime":打样天数,"moldRequired":"是|否","moldTime":开模天数或null,"bulkProductionTime":大货天数,"bomBreakdown":[{"part":"部件","material":"材质","unitCost":单价,"lossRate":"损耗率"}],"costBreakdown":{"materialCost":物料成本,"laborCost":人工,"packagingCost":包装,"fixedCostPerUnit":固定分摊,"logisticsCost":物流,"taxCost":税费},"suggestedMetadata":{"productName":"同上","material":"同上","productUrl":null,"product1688Url":null,"marketPrice":"同上","estimatedCost":"同上","estimatedCostMin":"同上","estimatedCostMax":"同上","moq":"同上","note":"同上","estimatedSize":"同上","samplingTime":"同上","moldRequired":"同上","moldTime":"同上","bulkProductionTime":"同上"}}'
 ].join('\n');
 
 @Injectable()
@@ -296,6 +300,11 @@ export class PhotoAnalysisService implements OnModuleInit {
       estimatedCostMax: this.parseNumber(nestedMeta.estimatedCostMax ?? parsed.estimatedCostMax),
       moq: this.parseInteger(nestedMeta.moq ?? parsed.moq),
       note: ((nestedMeta.note ?? parsed.note ?? null) as string | null),
+      estimatedSize: ((nestedMeta.estimatedSize ?? parsed.estimatedSize ?? null) as string | null),
+      samplingTime: this.parseInteger(nestedMeta.samplingTime ?? parsed.samplingTime),
+      moldRequired: ((nestedMeta.moldRequired ?? parsed.moldRequired ?? null) as string | null),
+      moldTime: this.parseInteger(nestedMeta.moldTime ?? parsed.moldTime),
+      bulkProductionTime: this.parseInteger(nestedMeta.bulkProductionTime ?? parsed.bulkProductionTime),
       bomBreakdown: (Array.isArray(nestedMeta.bomBreakdown)
         ? nestedMeta.bomBreakdown
         : Array.isArray(parsed.bomBreakdown)
@@ -426,6 +435,8 @@ export class PhotoAnalysisService implements OnModuleInit {
     const costRange = this.estimateCostRange({ marketPrice, supplierPrice, material, moq });
     const confidence = this.computeConfidence({ digests, material, marketPrice, supplierPrice });
     const reasoningSummary = this.buildReasoningSummary({ material, marketPrice, supplierPrice, moq, digests, confidence });
+    const moldReq = this.inferMoldRequired(material);
+    const estimatedSize = this.extractEstimatedSize(sourceText, digests);
 
     return {
       provider,
@@ -444,6 +455,11 @@ export class PhotoAnalysisService implements OnModuleInit {
         estimatedCostMax: costRange.max,
         moq,
         note: reasoningSummary,
+        estimatedSize,
+        samplingTime: moldReq === '是' ? 20 : 7,
+        moldRequired: moldReq,
+        moldTime: moldReq === '是' ? 15 : null,
+        bulkProductionTime: moq ? Math.max(15, Math.ceil(moq / 100)) : 30,
         bomBreakdown: null,
         costBreakdown: null
       },
@@ -519,7 +535,12 @@ export class PhotoAnalysisService implements OnModuleInit {
                     estimatedCostMin: { type: ['number', 'null'] },
                     estimatedCostMax: { type: ['number', 'null'] },
                     moq: { type: ['integer', 'null'] },
-                    note: { type: ['string', 'null'] }
+                    note: { type: ['string', 'null'] },
+                    estimatedSize: { type: ['string', 'null'] },
+                    samplingTime: { type: ['number', 'null'] },
+                    moldRequired: { type: ['string', 'null'] },
+                    moldTime: { type: ['number', 'null'] },
+                    bulkProductionTime: { type: ['number', 'null'] }
                   },
                   required: [
                     'productName',
@@ -531,7 +552,12 @@ export class PhotoAnalysisService implements OnModuleInit {
                     'estimatedCostMin',
                     'estimatedCostMax',
                     'moq',
-                    'note'
+                    'note',
+                    'estimatedSize',
+                    'samplingTime',
+                    'moldRequired',
+                    'moldTime',
+                    'bulkProductionTime'
                   ]
                 }
               },
@@ -617,6 +643,11 @@ export class PhotoAnalysisService implements OnModuleInit {
       estimatedCostMax: input.estimatedCostMax ?? heuristics.estimatedCostMax,
       moq: input.moq ?? heuristics.moq,
       note: input.note || heuristics.note,
+      estimatedSize: input.estimatedSize || heuristics.estimatedSize,
+      samplingTime: input.samplingTime ?? heuristics.samplingTime,
+      moldRequired: input.moldRequired || heuristics.moldRequired,
+      moldTime: input.moldTime ?? heuristics.moldTime,
+      bulkProductionTime: input.bulkProductionTime ?? heuristics.bulkProductionTime,
       bomBreakdown: input.bomBreakdown ?? null,
       costBreakdown: input.costBreakdown ?? null
     };
@@ -724,6 +755,29 @@ export class PhotoAnalysisService implements OnModuleInit {
       return null;
     }
     return this.numberOrNull(match[1]);
+  }
+
+  private inferMoldRequired(material: string | null): string | null {
+    if (!material) return null;
+    if (/亚克力|合金|不锈钢|黄铜|银|树脂|ABS/i.test(material)) return '是';
+    if (/帆布|尼龙|涤纶|棉麻|PVC|硅胶|PU布/i.test(material)) return '否';
+    return null;
+  }
+
+  private extractEstimatedSize(text: string | null, digests: SourceDigest[]): string | null {
+    if (text) {
+      const sizeMatch = text.match(
+        /(\d{1,3}\s*(?:cm|厘米|mm|毫米)?\s*[*×xX]\s*\d{1,3}\s*(?:cm|厘米|mm|毫米)?(?:\s*[*×xX]\s*\d{1,3}\s*(?:cm|厘米|mm|毫米)?)?)/i
+      );
+      if (sizeMatch) {
+        return sizeMatch[1].replace(/厘米/g, 'cm').replace(/毫米/g, 'mm').replace(/\s+/g, '');
+      }
+    }
+    for (const d of digests) {
+      const found = this.extractEstimatedSize([d.title, d.description, d.excerpt].filter(Boolean).join(' | '), []);
+      if (found) return found;
+    }
+    return null;
   }
 
   private extractMaterial(text: string | null) {

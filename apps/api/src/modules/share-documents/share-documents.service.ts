@@ -1,7 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import PPTXGenJS from 'pptxgenjs';
+import sharp from 'sharp';
 
 import { PostgresRepository } from '../../data/postgres.repository';
+import { ProductMetadata } from '../../common/types';
 import { CreateShareDocumentDto } from './share-documents.dto';
 
 @Injectable()
@@ -42,154 +44,143 @@ export class ShareDocumentsService {
     pptx.subject = 'Product Share Document';
     pptx.title = shareDocument.title;
 
-    // Title slide — matching template slide 1 design
+    // Title slide — matching template slide 1
     const titleSlide = pptx.addSlide();
     titleSlide.background = { color: 'FFFFFF' };
     titleSlide.addText(shareDocument.title, {
-      x: 0.67,
-      y: 3.05,
-      w: 11.5,
-      h: 1.39,
-      color: '000000',
-      fontFace: '微软雅黑',
-      fontSize: 36
+      x: 0.43, y: 2.82, w: 12, h: 1.2,
+      color: '000000', bold: true,
+      fontFace: 'Microsoft YaHei', fontSize: 42,
+      margin: 0
     });
     if (shareDocument.description) {
       titleSlide.addText(shareDocument.description, {
-        x: 0.67,
-        y: 4.42,
-        w: 11,
-        h: 0.6,
+        x: 0.43, y: 4.65, w: 12, h: 0.5,
         color: '5F5F5F',
-        fontFace: '微软雅黑',
-        fontSize: 14
+        fontFace: 'Microsoft YaHei', fontSize: 14,
+        margin: 0
       });
     }
 
-    // Product slides — matching template slides 2-7
+    // Product slides — one per share document item
     for (const [index, item] of shareDocument.items.entries()) {
-      const imageData = await this.toDataUri(item.snapshot.imageUrl);
+      const imageInfo = await this.toImageInfo(item.snapshot.imageUrl);
       const slide = pptx.addSlide();
       slide.background = { color: 'FFFFFF' };
 
-      // Product name — (0.40, 0.57)" 24pt bold 微软雅黑
+      // Product name at top — (0.40, 0.40)"
       slide.addText(item.snapshot.productName || `产品 ${index + 1}`, {
-        x: 0.4,
-        y: 0.57,
-        w: 12,
-        h: 0.36,
-        color: '000000',
-        bold: true,
-        fontFace: '微软雅黑',
-        fontSize: 24
+        x: 0.40, y: 0.40, w: 12, h: 0.50,
+        color: '000000', bold: true,
+        fontFace: 'Microsoft YaHei', fontSize: 42,
+        margin: 0
       });
 
-      // Product image — maintain aspect ratio with contain sizing
-      if (imageData) {
+      // Main product image on left — aspect-ratio-preserved within (0.40, 0.90)", max 8.7"x4.0"
+      if (imageInfo) {
+        const mainAreaW = 8.7;
+        const mainAreaH = 4.0;
+        const mainScale = Math.min(mainAreaW / imageInfo.width, mainAreaH / imageInfo.height, 1.0);
+        const mainW = imageInfo.width * mainScale;
+        const mainH = imageInfo.height * mainScale;
         slide.addImage({
-          data: imageData,
-          x: 0.4,
-          y: 1.2,
-          w: 8.7,
-          h: 3.9,
-          sizing: { type: 'contain', x: 0.4, y: 1.2, w: 8.7, h: 3.9 }
+          data: imageInfo.dataUri,
+          x: 0.40, y: 0.90,
+          w: mainW, h: mainH,
+          sizing: { type: 'contain', w: mainW, h: mainH }
+        });
+
+        // Reference image on right — "产品参考" area at (9.37, 1.88)", max 3.27"x3.75"
+        slide.addText('产品参考：', {
+          x: 9.40, y: 1.42, w: 3.27, h: 0.30,
+          color: '000000',
+          fontFace: 'Microsoft YaHei', fontSize: 12,
+          margin: 0
+        });
+        const refAreaW = 3.27;
+        const refAreaH = 3.75;
+        const refScale = Math.min(refAreaW / imageInfo.width, refAreaH / imageInfo.height, 1.0);
+        slide.addImage({
+          data: imageInfo.dataUri,
+          x: 9.37, y: 1.88,
+          w: imageInfo.width * refScale, h: imageInfo.height * refScale,
+          sizing: { type: 'contain', w: imageInfo.width * refScale, h: imageInfo.height * refScale }
         });
       }
 
-      // "产品 Spec" label — (0.40, 5.32)" 20pt bold Speedee
+      // "产品 Spec" label
       slide.addText('产品 Spec', {
-        x: 0.4,
-        y: 5.32,
-        w: 2.5,
-        h: 0.3,
-        color: '000000',
-        bold: true,
-        fontFace: 'Speedee',
-        fontSize: 20
+        x: 0.40, y: 5.67, w: 2.5, h: 0.30,
+        color: '000000', bold: true,
+        fontFace: 'Microsoft YaHei', fontSize: 20,
+        margin: 0
       });
 
-      // 9-column spec table matching template exactly
-      const headerOpts = {
-        fill: { color: 'DB0007' },
-        color: 'FFFFFF',
-        bold: true,
-        fontSize: 12,
-        fontFace: '微软雅黑',
-        align: 'center' as const,
-        valign: 'middle' as const
+      // 9-column spec table — factory functions avoid PptxGenJS object mutation bug
+      const makeHeaderOpts = function () {
+        return {
+          fill: { color: 'DB0007' },
+          color: 'FFFFFF',
+          bold: true,
+          fontSize: 12,
+          fontFace: 'Microsoft YaHei',
+          align: 'center' as const,
+          valign: 'middle' as const,
+          border: { pt: 0.5, color: 'DB0007' }
+        };
       };
-      const dataOpts = {
-        fill: { color: 'FFFFFF' },
-        color: '000000',
-        fontSize: 14,
-        fontFace: '微软雅黑',
-        align: 'center' as const,
-        valign: 'middle' as const
+      const makeDataOpts = function () {
+        return {
+          fill: { color: 'FFFFFF' },
+          color: '000000',
+          fontSize: 14,
+          fontFace: 'Microsoft YaHei',
+          align: 'center' as const,
+          valign: 'middle' as const,
+          border: { pt: 0.5, color: 'DB0007' }
+        };
       };
-      const border = { pt: 0.5, color: 'DB0007' };
+
+      const snap = item.snapshot as ProductMetadata & {
+        estimatedCostMin?: number | null;
+        estimatedCostMax?: number | null;
+      };
+
+      const formatCost = (value: number | null | undefined) =>
+        value != null ? `¥${value}` : '-';
+      const formatDays = (value: number | null | undefined) =>
+        value != null ? `${value}天` : '-';
 
       const tableRows = [
         [
-          { text: '主体材质', options: { ...headerOpts, border } },
-          { text: '预估尺寸', options: { ...headerOpts, border } },
-          { text: 'MOQ', options: { ...headerOpts, border } },
-          { text: '预估含税价格\n-低', options: { ...headerOpts, border } },
-          { text: '预估含税价格\n-高', options: { ...headerOpts, border } },
-          { text: '单次打样时间', options: { ...headerOpts, border } },
-          { text: '是否开模', options: { ...headerOpts, border } },
-          { text: '预估开模时间', options: { ...headerOpts, border } },
-          { text: '预估大货时间', options: { ...headerOpts, border } }
+          { text: '主体材质', options: makeHeaderOpts() },
+          { text: '预估尺寸', options: makeHeaderOpts() },
+          { text: 'MOQ', options: makeHeaderOpts() },
+          { text: '预估含税价格\n-低', options: makeHeaderOpts() },
+          { text: '预估含税价格\n-高', options: makeHeaderOpts() },
+          { text: '单次打样时间', options: makeHeaderOpts() },
+          { text: '是否开模', options: makeHeaderOpts() },
+          { text: '预估开模时间', options: makeHeaderOpts() },
+          { text: '预估大货时间', options: makeHeaderOpts() }
         ],
         [
-          { text: item.snapshot.material || '-', options: { ...dataOpts, border } },
-          { text: '-', options: { ...dataOpts, border } },
-          { text: String(item.snapshot.moq ?? '-'), options: { ...dataOpts, border } },
-          { text: item.snapshot.estimatedCost != null ? `¥${item.snapshot.estimatedCost}` : '-', options: { ...dataOpts, border } },
-          { text: item.snapshot.marketPrice != null ? `¥${item.snapshot.marketPrice}` : '-', options: { ...dataOpts, border } },
-          { text: '-', options: { ...dataOpts, border } },
-          { text: '-', options: { ...dataOpts, border } },
-          { text: '-', options: { ...dataOpts, border } },
-          { text: '-', options: { ...dataOpts, border } }
+          { text: snap.material || '-', options: makeDataOpts() },
+          { text: snap.estimatedSize || '-', options: makeDataOpts() },
+          { text: snap.moq != null ? String(snap.moq) : '-', options: makeDataOpts() },
+          { text: formatCost(snap.estimatedCostMin), options: makeDataOpts() },
+          { text: formatCost(snap.estimatedCostMax), options: makeDataOpts() },
+          { text: formatDays(snap.samplingTime), options: makeDataOpts() },
+          { text: snap.moldRequired || '-', options: makeDataOpts() },
+          { text: snap.moldTime != null ? `${snap.moldTime}天` : (snap.moldRequired === '否' ? '/' : '-'), options: makeDataOpts() },
+          { text: formatDays(snap.bulkProductionTime), options: makeDataOpts() }
         ]
       ];
 
       slide.addTable(tableRows, {
-        x: 0.4,
-        y: 5.78,
-        w: 12.4,
+        x: 0.40, y: 6.05, w: 12.4,
         colW: [1.38, 1.81, 1.23, 1.68, 1.7, 1.21, 0.88, 1.26, 1.27],
-        rowH: [0.48, 0.67],
-        border: { pt: 0.5, color: 'DB0007' }
+        rowH: [0.48, 0.67]
       });
-
-      // Links and note below table
-      const linkY = 7.0;
-      slide.addText(`产品链接: ${item.snapshot.productUrl || '-'}`, {
-        x: 0.4,
-        y: linkY,
-        w: 12.4,
-        h: 0.2,
-        color: '5F5F5F',
-        fontSize: 8
-      });
-      slide.addText(`1688链接: ${item.snapshot.product1688Url || '-'}`, {
-        x: 0.4,
-        y: linkY + 0.17,
-        w: 12.4,
-        h: 0.2,
-        color: '5F5F5F',
-        fontSize: 8
-      });
-      if (item.snapshot.note) {
-        slide.addText(`备注: ${item.snapshot.note}`, {
-          x: 0.4,
-          y: linkY + 0.34,
-          w: 12.4,
-          h: 0.2,
-          color: '5F5F5F',
-          fontSize: 8
-        });
-      }
     }
 
     const buffer = (await pptx.write({
@@ -202,16 +193,22 @@ export class ShareDocumentsService {
     };
   }
 
-  private async toDataUri(imageUrl: string) {
+  private async toImageInfo(imageUrl: string): Promise<{
+    dataUri: string;
+    width: number;
+    height: number;
+  } | null> {
     try {
       const response = await fetch(imageUrl);
-      if (!response.ok) {
-        return null;
-      }
+      if (!response.ok) return null;
       const contentType = response.headers.get('content-type') ?? 'image/jpeg';
       const arrayBuffer = await response.arrayBuffer();
-      const base64 = Buffer.from(arrayBuffer).toString('base64');
-      return `data:${contentType};base64,${base64}`;
+      const buffer = Buffer.from(arrayBuffer);
+      const metadata = await sharp(buffer).metadata();
+      const width = metadata.width ?? 800;
+      const height = metadata.height ?? 600;
+      const base64 = buffer.toString('base64');
+      return { dataUri: `data:${contentType};base64,${base64}`, width, height };
     } catch {
       return null;
     }

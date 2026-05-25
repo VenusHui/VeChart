@@ -489,6 +489,13 @@ export class PostgresRepository {
           index,
           JSON.stringify({
             ...photo.metadata,
+            estimatedSize: photo.analysis.suggestedMetadata?.estimatedSize ?? null,
+            samplingTime: photo.analysis.suggestedMetadata?.samplingTime ?? null,
+            moldRequired: photo.analysis.suggestedMetadata?.moldRequired ?? null,
+            moldTime: photo.analysis.suggestedMetadata?.moldTime ?? null,
+            bulkProductionTime: photo.analysis.suggestedMetadata?.bulkProductionTime ?? null,
+            estimatedCostMin: photo.analysis.suggestedMetadata?.estimatedCostMin ?? null,
+            estimatedCostMax: photo.analysis.suggestedMetadata?.estimatedCostMax ?? null,
             imageUrl: photo.imageUrl,
             thumbnailUrl: photo.thumbnailUrl
           })
@@ -570,7 +577,12 @@ export class PostgresRepository {
         marketPrice: this.numberOrNull(row.marketPrice),
         estimatedCost: this.numberOrNull(row.estimatedCost),
         moq: this.intOrNull(row.moq),
-        note: this.stringOrEmpty(row.note)
+        note: this.stringOrEmpty(row.note),
+        estimatedSize: null,
+        samplingTime: null,
+        moldRequired: null,
+        moldTime: null,
+        bulkProductionTime: null
       },
       analysis: {
         status: this.analysisStatusOrDefault(row.analysisStatus),
@@ -601,6 +613,11 @@ export class PostgresRepository {
       estimatedCostMax: this.numberOrNull(record.estimatedCostMax),
       moq: this.intOrNull(record.moq),
       note: this.stringOrNull(record.note),
+      estimatedSize: this.stringOrNull(record.estimatedSize),
+      samplingTime: this.intOrNull(record.samplingTime),
+      moldRequired: this.stringOrNull(record.moldRequired),
+      moldTime: this.intOrNull(record.moldTime),
+      bulkProductionTime: this.intOrNull(record.bulkProductionTime),
       bomBreakdown: Array.isArray(record.bomBreakdown) ? record.bomBreakdown : null,
       costBreakdown: this.mapCostBreakdown(record.costBreakdown)
     };
@@ -634,7 +651,12 @@ export class PostgresRepository {
       marketPrice: patch.marketPrice ?? suggested?.marketPrice ?? current.marketPrice,
       estimatedCost: patch.estimatedCost ?? suggested?.estimatedCost ?? current.estimatedCost,
       moq: patch.moq ?? suggested?.moq ?? current.moq,
-      note: patch.note ?? suggested?.note ?? current.note
+      note: patch.note ?? suggested?.note ?? current.note,
+      estimatedSize: patch.estimatedSize ?? suggested?.estimatedSize ?? current.estimatedSize,
+      samplingTime: patch.samplingTime ?? suggested?.samplingTime ?? current.samplingTime,
+      moldRequired: patch.moldRequired ?? suggested?.moldRequired ?? current.moldRequired,
+      moldTime: patch.moldTime ?? suggested?.moldTime ?? current.moldTime,
+      bulkProductionTime: patch.bulkProductionTime ?? suggested?.bulkProductionTime ?? current.bulkProductionTime
     };
   }
 
@@ -647,7 +669,12 @@ export class PostgresRepository {
       marketPrice: this.numberOrNull(patch?.marketPrice),
       estimatedCost: this.numberOrNull(patch?.estimatedCost),
       moq: this.intOrNull(patch?.moq),
-      note: patch?.note?.trim() ?? ''
+      note: patch?.note?.trim() ?? '',
+      estimatedSize: this.stringOrNull(patch?.estimatedSize),
+      samplingTime: this.intOrNull(patch?.samplingTime),
+      moldRequired: this.stringOrNull(patch?.moldRequired),
+      moldTime: this.intOrNull(patch?.moldTime),
+      bulkProductionTime: this.intOrNull(patch?.bulkProductionTime)
     };
   }
 

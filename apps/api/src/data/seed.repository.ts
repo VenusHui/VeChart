@@ -297,7 +297,12 @@ export class SeedRepository {
         marketPrice,
         estimatedCost,
         moq,
-        note: '首版示例数据'
+        note: '首版示例数据',
+        estimatedSize: null,
+        samplingTime: null,
+        moldRequired: null,
+        moldTime: null,
+        bulkProductionTime: null
       },
       analysis: {
         status: 'confirmed',
@@ -318,6 +323,11 @@ export class SeedRepository {
           estimatedCostMax: estimatedCost,
           moq,
           note: '首版示例数据',
+          estimatedSize: null,
+          samplingTime: null,
+          moldRequired: null,
+          moldTime: null,
+          bulkProductionTime: null,
           bomBreakdown: null,
           costBreakdown: null
         }

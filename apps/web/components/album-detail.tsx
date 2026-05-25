@@ -14,7 +14,12 @@ const emptyDraft: ProductMetadata = {
   marketPrice: null,
   estimatedCost: null,
   moq: null,
-  note: ''
+  note: '',
+  estimatedSize: null,
+  samplingTime: null,
+  moldRequired: null,
+  moldTime: null,
+  bulkProductionTime: null
 };
 
 function fileToDataUrl(file: File) {
@@ -85,7 +90,12 @@ function makeDraftFromPhoto(photo: Photo | null): ProductMetadata {
     marketPrice: photo.metadata.marketPrice,
     estimatedCost: photo.metadata.estimatedCost,
     moq: photo.metadata.moq,
-    note: photo.metadata.note || ''
+    note: photo.metadata.note || '',
+    estimatedSize: photo.metadata.estimatedSize,
+    samplingTime: photo.metadata.samplingTime,
+    moldRequired: photo.metadata.moldRequired,
+    moldTime: photo.metadata.moldTime,
+    bulkProductionTime: photo.metadata.bulkProductionTime
   };
 }
 
@@ -102,7 +112,12 @@ function mergeSuggestion(photo: Photo, draft: ProductMetadata): ProductMetadata 
     marketPrice: suggested.marketPrice ?? draft.marketPrice,
     estimatedCost: suggested.estimatedCost ?? draft.estimatedCost,
     moq: suggested.moq ?? draft.moq,
-    note: suggested.note ?? draft.note
+    note: suggested.note ?? draft.note,
+    estimatedSize: suggested.estimatedSize ?? draft.estimatedSize,
+    samplingTime: suggested.samplingTime ?? draft.samplingTime,
+    moldRequired: suggested.moldRequired ?? draft.moldRequired,
+    moldTime: suggested.moldTime ?? draft.moldTime,
+    bulkProductionTime: suggested.bulkProductionTime ?? draft.bulkProductionTime
   };
 }
 

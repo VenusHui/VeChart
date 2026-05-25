@@ -29,6 +29,11 @@ export interface ProductMetadata {
   estimatedCost: number | null;
   moq: number | null;
   note: string;
+  estimatedSize: string | null;
+  samplingTime: number | null;
+  moldRequired: string | null;
+  moldTime: number | null;
+  bulkProductionTime: number | null;
 }
 
 export interface BomItem {
@@ -58,6 +63,11 @@ export interface SuggestedProductMetadata {
   estimatedCostMax: number | null;
   moq: number | null;
   note: string | null;
+  estimatedSize: string | null;
+  samplingTime: number | null;
+  moldRequired: string | null;
+  moldTime: number | null;
+  bulkProductionTime: number | null;
   bomBreakdown: BomItem[] | null;
   costBreakdown: CostBreakdown | null;
 }
