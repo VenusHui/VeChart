@@ -122,11 +122,14 @@ export class PhotoAnalysisService implements OnModuleInit {
   }
 
   private async runPhotoAnalysis(photoId: string) {
-    const provider = this.claudeApiKey
-      ? 'claude'
-      : this.openAiApiKey
-        ? 'openai-responses'
-        : 'heuristic';
+    let provider: string;
+    if (this.claudeApiKey) {
+      provider = 'claude';
+    } else if (this.openAiApiKey) {
+      provider = 'openai-responses';
+    } else {
+      provider = 'heuristic';
+    }
 
     try {
       await this.repository.markPhotoAnalysisRunning(photoId, provider);
@@ -302,8 +305,8 @@ export class PhotoAnalysisService implements OnModuleInit {
       estimatedCostMin: this.parseNumber(nestedMeta.estimatedCostMin ?? parsed.estimatedCostMin),
       estimatedCostMax: this.parseNumber(nestedMeta.estimatedCostMax ?? parsed.estimatedCostMax),
       moq: this.parseInteger(nestedMeta.moq ?? parsed.moq),
-      note: ((nestedMeta.note ?? parsed.note ?? null) as string | null),
-      estimatedSize: ((nestedMeta.estimatedSize ?? parsed.estimatedSize ?? null) as string | null),
+      note: (nestedMeta.note ?? parsed.note ?? null) as string | null,
+      estimatedSize: (nestedMeta.estimatedSize ?? parsed.estimatedSize ?? null) as string | null,
       samplingTime: this.parseInteger(nestedMeta.samplingTime ?? parsed.samplingTime),
       moldRequired: ((nestedMeta.moldRequired ?? parsed.moldRequired ?? null) as string | null),
       moldTime: this.parseInteger(nestedMeta.moldTime ?? parsed.moldTime),

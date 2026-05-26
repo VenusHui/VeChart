@@ -3,7 +3,6 @@ import PPTXGenJS from 'pptxgenjs';
 import sharp from 'sharp';
 
 import { PostgresRepository } from '../../data/postgres.repository';
-import { ProductMetadata } from '../../common/types';
 import { CreateShareDocumentDto } from './share-documents.dto';
 
 @Injectable()
@@ -131,15 +130,19 @@ export class ShareDocumentsService {
         };
       };
 
-      const snap = item.snapshot as ProductMetadata & {
-        estimatedCostMin?: number | null;
-        estimatedCostMax?: number | null;
-      };
+      const snap = item.snapshot;
 
-      const formatCost = (value: number | null | undefined) =>
-        value != null ? `¥${value}` : '-';
-      const formatDays = (value: number | null | undefined) =>
-        value != null ? `${value}天` : '-';
+      function formatCost(value: number | null | undefined): string {
+        return value != null ? `¥${value}` : '-';
+      }
+      function formatDays(value: number | null | undefined): string {
+        return value != null ? `${value}天` : '-';
+      }
+      function formatMoldTime(moldTime: number | null | undefined, moldRequired: string | null | undefined): string {
+        if (moldTime != null) return `${moldTime}天`;
+        if (moldRequired === '否') return '/';
+        return '-';
+      }
 
       const tableRows = [
         [
@@ -161,7 +164,7 @@ export class ShareDocumentsService {
           { text: formatCost(snap.estimatedCostMax), options: makeDataOpts() },
           { text: formatDays(snap.samplingTime), options: makeDataOpts() },
           { text: snap.moldRequired || '-', options: makeDataOpts() },
-          { text: snap.moldTime != null ? `${snap.moldTime}天` : (snap.moldRequired === '否' ? '/' : '-'), options: makeDataOpts() },
+          { text: formatMoldTime(snap.moldTime, snap.moldRequired), options: makeDataOpts() },
           { text: formatDays(snap.bulkProductionTime), options: makeDataOpts() }
         ]
       ];

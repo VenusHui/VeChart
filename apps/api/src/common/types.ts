@@ -102,6 +102,8 @@ export interface ShareDocumentItem {
   snapshot: ProductMetadata & {
     imageUrl: string;
     thumbnailUrl: string;
+    estimatedCostMin?: number | null;
+    estimatedCostMax?: number | null;
   };
 }
 
