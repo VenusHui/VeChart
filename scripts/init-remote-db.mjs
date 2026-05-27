@@ -91,7 +91,7 @@ if (rows[0].count === 0) {
 
   await appClient.query(`
     INSERT INTO share_documents (id, title, description, created_by, template_version, status)
-    VALUES ('share-launch', '春季新品推荐', '给渠道客户的新品展示', 'user-admin', 'v1', 'ready')
+    VALUES ('share-launch', '春季新品推荐', '给渠道客户的新品展示', 'user-admin', 'v1', 'pending')
     ON CONFLICT (id) DO NOTHING;
 
     INSERT INTO share_document_items (id, share_document_id, photo_id, sort_order, snapshot_json)

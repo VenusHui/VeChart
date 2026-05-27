@@ -121,6 +121,41 @@ export class PhotoAnalysisService implements OnModuleInit {
     return photo;
   }
 
+  async analyzePhotoForExport(
+    photo: PhotoRecord,
+    unifiedMoq: number | null
+  ): Promise<{
+    suggestedMetadata: SuggestedProductMetadata;
+    confidence: AnalysisConfidence | null;
+    reasoningSummary: string | null;
+  }> {
+    const digests = await this.collectSourceDigests(photo);
+
+    let result: AnalysisResult;
+    try {
+      if (this.claudeApiKey) {
+        result = await this.runClaudeAnalysis(photo, digests, unifiedMoq);
+      } else if (this.openAiApiKey) {
+        result = await this.runOpenAiAnalysis(photo, digests, unifiedMoq);
+      } else {
+        result = this.runHeuristicAnalysis(photo, digests, 'heuristic', unifiedMoq);
+      }
+    } catch (error) {
+      this.logger.warn(
+        `Export analysis failed for ${photo.id}, falling back to heuristics: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+      result = this.runHeuristicAnalysis(photo, digests, 'heuristic-fallback', unifiedMoq);
+    }
+
+    return {
+      suggestedMetadata: result.suggestedMetadata,
+      confidence: result.confidence,
+      reasoningSummary: result.reasoningSummary
+    };
+  }
+
   private async runPhotoAnalysis(photoId: string) {
     let provider: string;
     if (this.claudeApiKey) {
@@ -220,17 +255,19 @@ export class PhotoAnalysisService implements OnModuleInit {
     }
   }
 
-  private async runClaudeAnalysis(photo: PhotoRecord, digests: SourceDigest[]): Promise<AnalysisResult> {
+  private async runClaudeAnalysis(photo: PhotoRecord, digests: SourceDigest[], unifiedMoq: number | null = null): Promise<AnalysisResult> {
+    const moqLine = unifiedMoq != null ? `\n统一 MOQ: ${unifiedMoq} 件（客户设定的整批起订量，请基于此批量估算成本，MOQ 字段请返回此值）\n` : '';
     const systemPrompt = [
       '你是专业的文创/小商品成本分析选品助理。请根据商品图片与补充网页信息，输出结构化的商品分析 JSON。',
       '',
       COST_METHODOLOGY,
+      moqLine,
       '',
       OUTPUT_SCHEMA,
       '',
       `当前草稿 metadata：${JSON.stringify(photo.metadata)}`,
       `网页摘要 digests：${JSON.stringify(digests)}`
-    ].join('\n');
+    ].filter(Boolean).join('\n');
 
     const imageBlock = await this.fetchImageBase64(photo.imageUrl);
 
@@ -411,7 +448,7 @@ export class PhotoAnalysisService implements OnModuleInit {
     }
   }
 
-  private runHeuristicAnalysis(photo: PhotoRecord, digests: SourceDigest[], provider: string): AnalysisResult {
+  private runHeuristicAnalysis(photo: PhotoRecord, digests: SourceDigest[], provider: string, unifiedMoq: number | null = null): AnalysisResult {
     const sourceText = digests
       .map((item) => [item.title, item.description, item.excerpt].filter(Boolean).join(' | '))
       .join(' | ');
@@ -430,7 +467,7 @@ export class PhotoAnalysisService implements OnModuleInit {
       this.extractPriceNearKeyword(sourceText, /(1688|批发价|拿货价|供货价)/),
       ...digests.flatMap((item) => item.prices)
     ]);
-    const moq = this.firstInteger([photo.metadata.moq, ...digests.map((item) => item.moq), 50]);
+    const moq = unifiedMoq ?? this.firstInteger([photo.metadata.moq, ...digests.map((item) => item.moq), 50]);
     const title =
       this.firstNonEmpty([
         photo.metadata.productName,
@@ -483,7 +520,8 @@ export class PhotoAnalysisService implements OnModuleInit {
     };
   }
 
-  private async runOpenAiAnalysis(photo: PhotoRecord, digests: SourceDigest[]): Promise<AnalysisResult> {
+  private async runOpenAiAnalysis(photo: PhotoRecord, digests: SourceDigest[], unifiedMoq: number | null = null): Promise<AnalysisResult> {
+    const moqLine = unifiedMoq != null ? `\n统一 MOQ: ${unifiedMoq} 件（客户设定的整批起订量，请基于此批量估算成本，MOQ 字段请返回此值）\n` : '';
     const prompt = [
       '你是产品选品助理。请根据商品图片与补充网页信息，输出结构化的商品建议字段。',
       '要求：',
@@ -491,9 +529,10 @@ export class PhotoAnalysisService implements OnModuleInit {
       '2. 成本必须输出为区间和中位建议；如果不确定，降低 confidence。',
       '3. 所有建议值都要保守，不要编造过度具体的材质或价格。',
       '4. 若链接信息与图片冲突，以链接标题/材质为主，并在 reasoningSummary 中说明。',
+      moqLine,
       `当前已知草稿：${JSON.stringify(photo.metadata)}`,
       `网页摘要：${JSON.stringify(digests)}`
-    ].join('\n');
+    ].filter(Boolean).join('\n');
 
     const response = await fetch(`${this.openAiBaseUrl.replace(/\/$/, '')}/responses`, {
       method: 'POST',

@@ -102,13 +102,53 @@ SET analysis_status = 'confirmed',
     analysis_updated_at = COALESCE(analysis_updated_at, updated_at)
 WHERE analysis_status IS NULL OR analysis_status = '';
 
+-- Migration: add 'draft' to analysis_status check constraint
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'photo_product_metadata_analysis_status_check'
+  ) THEN
+    ALTER TABLE photo_product_metadata DROP CONSTRAINT photo_product_metadata_analysis_status_check;
+  END IF;
+END $$;
+ALTER TABLE photo_product_metadata ADD CONSTRAINT photo_product_metadata_analysis_status_check
+  CHECK (analysis_status IN ('draft', 'pending', 'running', 'succeeded', 'failed', 'confirmed'));
+ALTER TABLE photo_product_metadata ALTER COLUMN analysis_status SET DEFAULT 'draft';
+
+-- Migration: add export tracking columns to share_documents
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'share_documents_status_check'
+  ) THEN
+    ALTER TABLE share_documents DROP CONSTRAINT share_documents_status_check;
+  END IF;
+END $$;
+ALTER TABLE share_documents ADD COLUMN IF NOT EXISTS unified_moq INTEGER NULL;
+ALTER TABLE share_documents ADD COLUMN IF NOT EXISTS export_progress INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE share_documents ADD COLUMN IF NOT EXISTS export_file_path TEXT NULL;
+ALTER TABLE share_documents ADD COLUMN IF NOT EXISTS export_error TEXT NULL;
+ALTER TABLE share_documents ADD COLUMN IF NOT EXISTS export_started_at TIMESTAMPTZ NULL;
+ALTER TABLE share_documents ADD COLUMN IF NOT EXISTS export_completed_at TIMESTAMPTZ NULL;
+ALTER TABLE share_documents ADD CONSTRAINT share_documents_status_check
+  CHECK (status IN ('pending', 'analyzing', 'generating', 'completed', 'failed'));
+ALTER TABLE share_documents ALTER COLUMN status SET DEFAULT 'pending';
+
 CREATE TABLE IF NOT EXISTS share_documents (
   id TEXT PRIMARY KEY,
   title TEXT NOT NULL,
   description TEXT NOT NULL DEFAULT '',
   created_by TEXT NOT NULL REFERENCES users(id),
   template_version TEXT NOT NULL DEFAULT 'v1',
-  status TEXT NOT NULL DEFAULT 'ready',
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'analyzing', 'generating', 'completed', 'failed')),
+  unified_moq INTEGER NULL,
+  export_progress INTEGER NOT NULL DEFAULT 0,
+  export_file_path TEXT NULL,
+  export_error TEXT NULL,
+  export_started_at TIMESTAMPTZ NULL,
+  export_completed_at TIMESTAMPTZ NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

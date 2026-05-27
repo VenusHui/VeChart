@@ -254,7 +254,7 @@ export class PostgresRepository {
          market_price, estimated_cost, moq, note, analysis_status,
          analysis_sources_json, updated_by, analysis_updated_at, updated_at
        )
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', '[]'::jsonb, $10, NOW(), NOW())`,
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'draft', '[]'::jsonb, $10, NOW(), NOW())`,
       [
         photoId,
         metadata.productName,
@@ -462,21 +462,20 @@ export class PostgresRepository {
     description: string;
     photoIds: string[];
     createdBy: string;
+    unifiedMoq?: number | null;
   }) {
     const shareId = `share-${Date.now()}`;
+    const moq = input.unifiedMoq ?? null;
     await this.postgres.query(
       `INSERT INTO share_documents (
-         id, title, description, created_by, template_version, status, created_at, updated_at
+         id, title, description, created_by, template_version, status, unified_moq, created_at, updated_at
        )
-       VALUES ($1, $2, $3, $4, 'v1', 'ready', NOW(), NOW())`,
-      [shareId, input.title, input.description, input.createdBy]
+       VALUES ($1, $2, $3, $4, 'v1', 'pending', $5, NOW(), NOW())`,
+      [shareId, input.title, input.description, input.createdBy, moq]
     );
 
     for (const [index, photoId] of input.photoIds.entries()) {
       const photo = await this.getPhoto(photoId);
-      if (photo.analysis.status !== 'confirmed') {
-        throw new BadRequestException('请先确认商品信息后再生成分享文档');
-      }
       await this.postgres.query(
         `INSERT INTO share_document_items (
            id, share_document_id, photo_id, sort_order, snapshot_json
@@ -488,14 +487,21 @@ export class PostgresRepository {
           photoId,
           index,
           JSON.stringify({
-            ...photo.metadata,
-            estimatedSize: photo.analysis.suggestedMetadata?.estimatedSize ?? null,
-            samplingTime: photo.analysis.suggestedMetadata?.samplingTime ?? null,
-            moldRequired: photo.analysis.suggestedMetadata?.moldRequired ?? null,
-            moldTime: photo.analysis.suggestedMetadata?.moldTime ?? null,
-            bulkProductionTime: photo.analysis.suggestedMetadata?.bulkProductionTime ?? null,
-            estimatedCostMin: photo.analysis.suggestedMetadata?.estimatedCostMin ?? null,
-            estimatedCostMax: photo.analysis.suggestedMetadata?.estimatedCostMax ?? null,
+            productName: photo.metadata.productName || '',
+            material: photo.metadata.material || '',
+            productUrl: photo.metadata.productUrl || '',
+            product1688Url: photo.metadata.product1688Url || '',
+            marketPrice: photo.metadata.marketPrice,
+            estimatedCost: photo.metadata.estimatedCost,
+            moq: moq ?? photo.metadata.moq,
+            note: photo.metadata.note || '',
+            estimatedSize: photo.metadata.estimatedSize ?? null,
+            samplingTime: photo.metadata.samplingTime ?? null,
+            moldRequired: photo.metadata.moldRequired ?? null,
+            moldTime: photo.metadata.moldTime ?? null,
+            bulkProductionTime: photo.metadata.bulkProductionTime ?? null,
+            estimatedCostMin: null,
+            estimatedCostMax: null,
             imageUrl: photo.imageUrl,
             thumbnailUrl: photo.thumbnailUrl
           })
@@ -512,6 +518,14 @@ export class PostgresRepository {
               title,
               description,
               created_by AS "createdBy",
+              template_version AS "templateVersion",
+              status,
+              unified_moq AS "unifiedMoq",
+              export_progress AS "exportProgress",
+              export_file_path AS "exportFileUrl",
+              export_error AS "exportError",
+              export_started_at AS "exportStartedAt",
+              export_completed_at AS "exportCompletedAt",
               created_at AS "createdAt",
               updated_at AS "updatedAt"
        FROM share_documents
@@ -551,12 +565,91 @@ export class PostgresRepository {
               title,
               description,
               created_by AS "createdBy",
+              template_version AS "templateVersion",
+              status,
+              unified_moq AS "unifiedMoq",
+              export_progress AS "exportProgress",
+              export_file_path AS "exportFileUrl",
+              export_error AS "exportError",
+              export_started_at AS "exportStartedAt",
+              export_completed_at AS "exportCompletedAt",
               created_at AS "createdAt",
               updated_at AS "updatedAt"
        FROM share_documents
        ORDER BY created_at DESC`
     );
     return result.rows as unknown as ShareDocumentRecord[];
+  }
+
+  async listShareDocumentsByStatuses(statuses: string[]) {
+    const result = await this.postgres.query<RowShape>(
+      `SELECT id,
+              title,
+              description,
+              created_by AS "createdBy",
+              template_version AS "templateVersion",
+              status,
+              unified_moq AS "unifiedMoq",
+              export_progress AS "exportProgress",
+              export_file_path AS "exportFileUrl",
+              export_error AS "exportError",
+              export_started_at AS "exportStartedAt",
+              export_completed_at AS "exportCompletedAt",
+              created_at AS "createdAt",
+              updated_at AS "updatedAt"
+       FROM share_documents
+       WHERE status = ANY($1::text[])
+       ORDER BY created_at DESC`,
+      [statuses]
+    );
+    return result.rows as unknown as ShareDocumentRecord[];
+  }
+
+  async updateShareDocumentStatus(shareId: string, status: string, progress: number) {
+    await this.postgres.query(
+      `UPDATE share_documents
+       SET status = $2,
+           export_progress = $3,
+           export_started_at = COALESCE(export_started_at, NOW()),
+           updated_at = NOW()
+       WHERE id = $1`,
+      [shareId, status, progress]
+    );
+  }
+
+  async updateShareDocumentItemSnapshot(itemId: string, snapshot: Record<string, unknown>) {
+    await this.postgres.query(
+      `UPDATE share_document_items
+       SET snapshot_json = $2::jsonb
+       WHERE id = $1`,
+      [itemId, JSON.stringify(snapshot)]
+    );
+  }
+
+  async markShareDocumentExportCompleted(shareId: string, filePath: string) {
+    await this.postgres.query(
+      `UPDATE share_documents
+       SET status = 'completed',
+           export_progress = 100,
+           export_file_path = $2,
+           export_error = NULL,
+           export_completed_at = NOW(),
+           updated_at = NOW()
+       WHERE id = $1`,
+      [shareId, filePath]
+    );
+  }
+
+  async markShareDocumentExportFailed(shareId: string, error: string) {
+    await this.postgres.query(
+      `UPDATE share_documents
+       SET status = 'failed',
+           export_error = $2,
+           export_completed_at = NOW(),
+           updated_at = NOW()
+       WHERE id = $1`,
+      [shareId, error]
+    );
   }
 
   private mapPhotoRow(row: RowShape): PhotoRecord {
@@ -680,6 +773,7 @@ export class PostgresRepository {
 
   private analysisStatusOrDefault(value: unknown): PhotoAnalysisStatus {
     if (
+      value === 'draft' ||
       value === 'pending' ||
       value === 'running' ||
       value === 'succeeded' ||

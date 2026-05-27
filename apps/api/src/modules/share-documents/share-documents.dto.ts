@@ -1,4 +1,4 @@
-import { ArrayMinSize, IsArray, IsOptional, IsString, MinLength } from 'class-validator';
+import { ArrayMinSize, IsArray, IsInt, IsOptional, IsString, Min, MinLength } from 'class-validator';
 
 export class CreateShareDocumentDto {
   @IsString()
@@ -12,4 +12,9 @@ export class CreateShareDocumentDto {
   @IsArray()
   @ArrayMinSize(1)
   photoIds!: string[];
+
+  @IsInt()
+  @Min(1)
+  @IsOptional()
+  moq?: number;
 }

@@ -1,4 +1,4 @@
-export type PhotoAnalysisStatus = 'pending' | 'running' | 'succeeded' | 'failed' | 'confirmed';
+export type PhotoAnalysisStatus = 'draft' | 'pending' | 'running' | 'succeeded' | 'failed' | 'confirmed';
 export type AnalysisConfidence = 'low' | 'medium' | 'high';
 
 export interface User {
@@ -100,6 +100,14 @@ export interface ShareDocument {
   title: string;
   description: string;
   createdBy: string;
+  templateVersion: string;
+  status: 'pending' | 'analyzing' | 'generating' | 'completed' | 'failed';
+  unifiedMoq: number | null;
+  exportProgress: number;
+  exportFileUrl: string | null;
+  exportError: string | null;
+  exportStartedAt: string | null;
+  exportCompletedAt: string | null;
   createdAt: string;
   updatedAt: string;
   items: Array<{

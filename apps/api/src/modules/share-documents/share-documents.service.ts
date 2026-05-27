@@ -19,8 +19,11 @@ export class ShareDocumentsService {
 
   createShareDocument(userId: string, dto: CreateShareDocumentDto) {
     return this.repository.createShareDocument({
-      ...dto,
-      createdBy: userId
+      title: dto.title,
+      description: dto.description,
+      photoIds: dto.photoIds,
+      createdBy: userId,
+      unifiedMoq: dto.moq ?? null
     });
   }
 

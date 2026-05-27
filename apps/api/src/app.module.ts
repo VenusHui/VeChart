@@ -5,6 +5,7 @@ import { DataModule } from './data/data.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { AlbumsModule } from './modules/albums/albums.module';
 import { PhotosModule } from './modules/photos/photos.module';
+import { ExportTasksModule } from './modules/export-tasks/export-tasks.module';
 import { ShareDocumentsModule } from './modules/share-documents/share-documents.module';
 
 @Module({
@@ -16,7 +17,8 @@ import { ShareDocumentsModule } from './modules/share-documents/share-documents.
     AuthModule,
     AlbumsModule,
     PhotosModule,
-    ShareDocumentsModule
+    ShareDocumentsModule,
+    ExportTasksModule
   ]
 })
 export class AppModule {}

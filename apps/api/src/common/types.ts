@@ -1,5 +1,6 @@
 export type Role = 'admin' | 'editor';
-export type PhotoAnalysisStatus = 'pending' | 'running' | 'succeeded' | 'failed' | 'confirmed';
+export type PhotoAnalysisStatus = 'draft' | 'pending' | 'running' | 'succeeded' | 'failed' | 'confirmed';
+export type ShareDocExportStatus = 'pending' | 'analyzing' | 'generating' | 'completed' | 'failed';
 export type AnalysisConfidence = 'low' | 'medium' | 'high';
 
 export interface UserRecord {
@@ -112,6 +113,14 @@ export interface ShareDocumentRecord {
   title: string;
   description: string;
   createdBy: string;
+  templateVersion: string;
+  status: ShareDocExportStatus;
+  unifiedMoq: number | null;
+  exportProgress: number;
+  exportFileUrl: string | null;
+  exportError: string | null;
+  exportStartedAt: string | null;
+  exportCompletedAt: string | null;
   createdAt: string;
   updatedAt: string;
   items: ShareDocumentItem[];

@@ -16,10 +16,7 @@ export class PhotosService {
   }
 
   createPhoto(albumId: string, userId: string, dto: CreatePhotoDto) {
-    return this.repository.createPhoto(albumId, userId, dto).then((photo) => {
-      this.analysisService.enqueuePhotoAnalysis(photo.id);
-      return photo;
-    });
+    return this.repository.createPhoto(albumId, userId, dto);
   }
 
   updatePhoto(photoId: string, dto: UpdatePhotoDto) {

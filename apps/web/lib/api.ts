@@ -38,6 +38,17 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+function downloadBlob(blob: Blob, fileName: string) {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = fileName;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
+
 export const api = {
   login: (email: string, password: string) =>
     request<{ user: User }>('/auth/login', {
@@ -96,39 +107,38 @@ export const api = {
     request<{ ok: boolean }>(`/photos/${photoId}`, {
       method: 'DELETE'
     }),
-  createShareDocument: (payload: { title: string; description: string; photoIds: string[] }) =>
+  createShareDocument: (payload: { title: string; description: string; photoIds: string[]; moq?: number }) =>
     request<ShareDocument>('/share-documents', {
       method: 'POST',
       body: JSON.stringify(payload)
     }),
   getShareDocument: (shareId: string) => request<ShareDocument>(`/share-documents/${shareId}`),
-  exportPdf: (shareId: string) =>
-    request<{ message: string }>(`/share-documents/${shareId}/export-pdf`, {
-      method: 'POST'
-    }),
-  exportPptx: async (
-    shareId: string,
-    fileName = `share-${shareId}.pptx`
-  ) => {
+  listExportTasks: () => request<ShareDocument[]>('/export-tasks'),
+  getExportTask: (shareId: string) => request<ShareDocument>(`/export-tasks/${shareId}`),
+  downloadExportPptx: async (shareId: string, fileName: string) => {
     const response = await fetch(
-      `${getApiBaseUrl()}/api/share-documents/${shareId}/export-pptx`,
-      {
-        method: 'POST',
-        credentials: 'include'
-      }
+      `${getApiBaseUrl()}/api/export-tasks/${shareId}/download`,
+      { method: 'GET', credentials: 'include' }
     );
     if (!response.ok) {
       const message = await response.text();
       throw new Error(message || `Request failed: ${response.status}`);
     }
-    const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = fileName;
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
-    URL.revokeObjectURL(url);
+    downloadBlob(await response.blob(), fileName);
+  },
+  exportPdf: (shareId: string) =>
+    request<{ message: string }>(`/share-documents/${shareId}/export-pdf`, {
+      method: 'POST'
+    }),
+  exportPptx: async (shareId: string, fileName = `share-${shareId}.pptx`) => {
+    const response = await fetch(
+      `${getApiBaseUrl()}/api/share-documents/${shareId}/export-pptx`,
+      { method: 'POST', credentials: 'include' }
+    );
+    if (!response.ok) {
+      const message = await response.text();
+      throw new Error(message || `Request failed: ${response.status}`);
+    }
+    downloadBlob(await response.blob(), fileName);
   }
 };

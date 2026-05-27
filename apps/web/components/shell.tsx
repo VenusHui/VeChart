@@ -28,6 +28,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
         <div className="topbar-actions">
           {user ? (
             <>
+              <Link href="/tasks" className="button button-secondary">
+                导出任务
+              </Link>
               <span className="user-chip">
                 {user.name} · {user.role}
               </span>

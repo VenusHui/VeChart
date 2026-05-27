@@ -2,6 +2,7 @@
 
 import { ClipboardEvent, FormEvent, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 import { api } from '@/lib/api';
 import { Album, BomItem, CostBreakdown, Photo, ProductMetadata } from '@/lib/types';
@@ -63,6 +64,8 @@ function formatMoney(value: number | null | undefined) {
 
 function statusMeta(status: Photo['analysis']['status']) {
   switch (status) {
+    case 'draft':
+      return { label: '草稿', className: 'status-draft' };
     case 'pending':
       return { label: '待分析', className: 'status-pending' };
     case 'running':
@@ -131,6 +134,7 @@ function getCardDisplay(photo: Photo) {
 }
 
 export function AlbumDetail({ albumId }: { albumId: string }) {
+  const router = useRouter();
   const [album, setAlbum] = useState<Album | null>(null);
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [selectedPhotoId, setSelectedPhotoId] = useState<string | null>(null);
@@ -139,6 +143,7 @@ export function AlbumDetail({ albumId }: { albumId: string }) {
   const [albumDescription, setAlbumDescription] = useState('');
   const [shareTitle, setShareTitle] = useState('');
   const [shareDescription, setShareDescription] = useState('');
+  const [shareMoq, setShareMoq] = useState('');
   const [uploading, setUploading] = useState(false);
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -241,22 +246,16 @@ export function AlbumDetail({ albumId }: { albumId: string }) {
 
   async function onCreateShareDocument(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const blockedPhotos = photos.filter(
-      (photo) => selectedPhotoIds.includes(photo.id) && photo.analysis.status !== 'confirmed'
-    );
-    if (blockedPhotos.length > 0) {
-      setError('分享文档只支持已确认商品信息的图片，请先确认后再分享');
-      return;
-    }
 
     try {
       const document = await api.createShareDocument({
         title: shareTitle || '未命名分享',
         description: shareDescription,
-        photoIds: selectedPhotoIds
+        photoIds: selectedPhotoIds,
+        moq: toOptionalNumber(shareMoq) ?? undefined
       });
       setShowShareModal(false);
-      window.location.href = `/share/${document.id}`;
+      router.push('/tasks');
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : '生成分享失败');
     }
@@ -477,7 +476,7 @@ export function AlbumDetail({ albumId }: { albumId: string }) {
             返回相册列表
           </Link>
           <h1>{album?.name || '相册图片'}</h1>
-          <p className="muted">上传后自动发起 AI 分析，先生成材质/成本建议，再由你确认进入正式商品资料。</p>
+          <p className="muted">上传图片后可在分享文档时统一进行 AI 成本分析并导出 PPTX。</p>
         </div>
       </div>
 
@@ -609,8 +608,8 @@ export function AlbumDetail({ albumId }: { albumId: string }) {
           >
             <div className="section-head">
               <div>
-                <h2>上传图片并自动分析</h2>
-                <p className="muted">上传成功后，系统会自动识别材质、成本区间、MOQ 和标题建议。</p>
+                <h2>上传图片</h2>
+                <p className="muted">上传图片后可手动填写商品信息，分享文档时会统一进行 AI 成本分析。</p>
               </div>
               <button
                 className="button button-secondary"
@@ -664,7 +663,7 @@ export function AlbumDetail({ albumId }: { albumId: string }) {
               <textarea name="note" placeholder="例如：目标渠道、包装要求、你已知的材质线索" />
             </label>
             <button className="button" disabled={uploading}>
-              {uploading ? '上传中...' : '上传并开始 AI 分析'}
+              {uploading ? '上传中...' : '上传图片'}
             </button>
           </form>
         </div>
@@ -1042,7 +1041,7 @@ export function AlbumDetail({ albumId }: { albumId: string }) {
                 关闭
               </button>
             </div>
-            <p className="muted">已选择 {selectedPhotoIds.length} 张图片，仅已确认资料的图片可生成分享文档。</p>
+            <p className="muted">已选择 {selectedPhotoIds.length} 张图片，将创建导出任务并统一进行 AI 成本分析。</p>
             <label>
               文档标题
               <input value={shareTitle} onChange={(event) => setShareTitle(event.target.value)} />
@@ -1054,7 +1053,17 @@ export function AlbumDetail({ albumId }: { albumId: string }) {
                 onChange={(event) => setShareDescription(event.target.value)}
               />
             </label>
-            <button className="button">生成分享页</button>
+            <label>
+              统一定起订量 (MOQ)
+              <input
+                type="number"
+                min="1"
+                value={shareMoq}
+                onChange={(event) => setShareMoq(event.target.value)}
+                placeholder="例如：500（所有产品统一 MOQ）"
+              />
+            </label>
+            <button className="button">创建导出任务</button>
           </form>
         </div>
       ) : null}
