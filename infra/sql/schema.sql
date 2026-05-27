@@ -116,7 +116,9 @@ ALTER TABLE photo_product_metadata ADD CONSTRAINT photo_product_metadata_analysi
   CHECK (analysis_status IN ('draft', 'pending', 'running', 'succeeded', 'failed', 'confirmed'));
 ALTER TABLE photo_product_metadata ALTER COLUMN analysis_status SET DEFAULT 'draft';
 
--- Migration: add export tracking columns to share_documents
+-- Migration: migrate existing share_documents status before adding new constraint
+UPDATE share_documents SET status = 'completed' WHERE status NOT IN ('pending', 'analyzing', 'generating', 'completed', 'failed');
+
 DO $$
 BEGIN
   IF EXISTS (
