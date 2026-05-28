@@ -29,12 +29,13 @@ export function PhotoGallery() {
     const seq = ++requestSeq.current;
     setLoading(true);
     setError('');
+    const explicit = (key: string) => params != null && Object.prototype.hasOwnProperty.call(params, key);
     try {
       const data = await api.listPhotos({
         page: params?.page ?? page,
-        brand: params?.brand ?? selectedBrand ?? undefined,
-        product: params?.product ?? selectedProduct ?? undefined,
-        q: (params?.search ?? searchText) || undefined,
+        brand: explicit('brand') ? (params!.brand ?? undefined) : (selectedBrand ?? undefined),
+        product: explicit('product') ? (params!.product ?? undefined) : (selectedProduct ?? undefined),
+        q: explicit('search') ? (params!.search || undefined) : (searchText || undefined),
         pageSize: PAGE_SIZE
       });
       if (seq !== requestSeq.current) return;
