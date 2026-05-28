@@ -162,3 +162,21 @@ CREATE TABLE IF NOT EXISTS share_document_items (
   sort_order INTEGER NOT NULL DEFAULT 0,
   snapshot_json JSONB NOT NULL
 );
+
+-- Category columns on photos
+ALTER TABLE photos ADD COLUMN IF NOT EXISTS primary_category TEXT;
+ALTER TABLE photos ADD COLUMN IF NOT EXISTS secondary_category TEXT;
+
+-- Enable trigram extension for fuzzy search
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+-- B-tree indexes for exact-match filter queries
+CREATE INDEX IF NOT EXISTS idx_photos_primary_category ON photos (primary_category);
+CREATE INDEX IF NOT EXISTS idx_photos_secondary_category ON photos (secondary_category);
+CREATE INDEX IF NOT EXISTS idx_photos_category_combo ON photos (primary_category, secondary_category);
+
+-- GIN trigram indexes for ILIKE search
+CREATE INDEX IF NOT EXISTS idx_photos_primary_category_trgm ON photos USING gin (primary_category gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_photos_secondary_category_trgm ON photos USING gin (secondary_category gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_metadata_product_name_trgm ON photo_product_metadata USING gin (product_name gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_metadata_material_trgm ON photo_product_metadata USING gin (material gin_trgm_ops);

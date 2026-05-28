@@ -66,6 +66,14 @@ export class CreatePhotoDto {
   thumbnailUrl?: string;
 
   @IsOptional()
+  @IsString()
+  primaryCategory?: string;
+
+  @IsOptional()
+  @IsString()
+  secondaryCategory?: string;
+
+  @IsOptional()
   @ValidateNested()
   @Type(() => ProductMetadataDraftDto)
   metadata?: ProductMetadataDraftDto;
@@ -75,10 +83,48 @@ export class UpdatePhotoDto {
   @ValidateNested()
   @Type(() => ProductMetadataDraftDto)
   metadata!: ProductMetadataDraftDto;
+
+  @IsOptional()
+  @IsString()
+  primaryCategory?: string;
+
+  @IsOptional()
+  @IsString()
+  secondaryCategory?: string;
 }
 
 export class ConfirmPhotoAnalysisDto {
   @ValidateNested()
   @Type(() => ProductMetadataDraftDto)
   metadata!: ProductMetadataDraftDto;
+}
+
+export class ListPhotosQueryDto {
+  @IsOptional()
+  @IsString()
+  q?: string;
+
+  @IsOptional()
+  @IsString()
+  brand?: string;
+
+  @IsOptional()
+  @IsString()
+  product?: string;
+
+  @IsOptional()
+  @IsString()
+  albumId?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(1)
+  page?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(1)
+  pageSize?: number;
 }

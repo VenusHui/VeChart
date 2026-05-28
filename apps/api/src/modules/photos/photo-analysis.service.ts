@@ -661,6 +661,8 @@ export class PhotoAnalysisService implements OnModuleInit {
         createdAt: '',
         updatedAt: '',
         createdBy: '',
+        primaryCategory: null,
+        secondaryCategory: null,
         metadata: current,
         analysis: {
           status: 'pending',

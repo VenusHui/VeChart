@@ -1,4 +1,4 @@
-import { Album, Photo, ProductMetadata, ShareDocument, User } from './types';
+import { Album, CategoryList, Photo, PhotoListParams, PhotoListResponse, ProductMetadata, ShareDocument, User } from './types';
 
 function getApiBaseUrl() {
   const configured = process.env.NEXT_PUBLIC_API_URL;
@@ -77,11 +77,25 @@ export const api = {
       method: 'DELETE'
     }),
   getAlbumPhotos: (albumId: string) => request<Photo[]>(`/albums/${albumId}/photos`),
+  listPhotos: (params: PhotoListParams = {}) => {
+    const searchParams = new URLSearchParams();
+    if (params.q) searchParams.set('q', params.q);
+    if (params.brand) searchParams.set('brand', params.brand);
+    if (params.product) searchParams.set('product', params.product);
+    if (params.albumId) searchParams.set('albumId', params.albumId);
+    if (params.page) searchParams.set('page', String(params.page));
+    if (params.pageSize) searchParams.set('pageSize', String(params.pageSize));
+    const qs = searchParams.toString();
+    return request<PhotoListResponse>(`/photos${qs ? `?${qs}` : ''}`);
+  },
+  listCategories: () => request<CategoryList>('/photos/categories'),
   createPhoto: (
     albumId: string,
     payload: {
       imageUrl: string;
       thumbnailUrl: string;
+      primaryCategory?: string;
+      secondaryCategory?: string;
       metadata?: Partial<ProductMetadata>;
     }
   ) =>
@@ -89,7 +103,14 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(payload)
     }),
-  updatePhoto: (photoId: string, payload: { metadata: Partial<ProductMetadata> }) =>
+  updatePhoto: (
+    photoId: string,
+    payload: {
+      metadata: Partial<ProductMetadata>;
+      primaryCategory?: string;
+      secondaryCategory?: string;
+    }
+  ) =>
     request<Photo>(`/photos/${photoId}`, {
       method: 'PATCH',
       body: JSON.stringify(payload)

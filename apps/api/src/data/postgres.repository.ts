@@ -26,6 +26,8 @@ const PHOTO_SELECT = `SELECT p.id,
               p.created_at AS "createdAt",
               p.updated_at AS "updatedAt",
               p.created_by AS "createdBy",
+              p.primary_category AS "primaryCategory",
+              p.secondary_category AS "secondaryCategory",
               m.product_name AS "productName",
               m.material,
               m.product_url AS "productUrl",
@@ -212,6 +214,101 @@ export class PostgresRepository {
     return result.rows.map((row) => this.mapPhotoRow(row));
   }
 
+  async listPhotos(params: {
+    search?: string;
+    primaryCategory?: string;
+    secondaryCategory?: string;
+    albumId?: string;
+    page?: number;
+    pageSize?: number;
+  }) {
+    const page = Math.max(1, params.page ?? 1);
+    const pageSize = Math.min(100, Math.max(1, params.pageSize ?? 20));
+    const offset = (page - 1) * pageSize;
+
+    const conditions: string[] = [];
+    const values: unknown[] = [];
+    let paramIdx = 1;
+
+    if (params.search && params.search.trim()) {
+      const term = `%${params.search.trim()}%`;
+      conditions.push(`(
+        m.product_name ILIKE $${paramIdx}
+        OR m.material ILIKE $${paramIdx}
+        OR p.primary_category ILIKE $${paramIdx}
+        OR p.secondary_category ILIKE $${paramIdx}
+      )`);
+      values.push(term);
+      paramIdx++;
+    }
+
+    if (params.primaryCategory && params.primaryCategory.trim()) {
+      conditions.push(`p.primary_category = $${paramIdx}`);
+      values.push(params.primaryCategory.trim());
+      paramIdx++;
+    }
+
+    if (params.secondaryCategory && params.secondaryCategory.trim()) {
+      conditions.push(`p.secondary_category = $${paramIdx}`);
+      values.push(params.secondaryCategory.trim());
+      paramIdx++;
+    }
+
+    if (params.albumId) {
+      conditions.push(`p.album_id = $${paramIdx}`);
+      values.push(params.albumId);
+      paramIdx++;
+    }
+
+    const whereClause = conditions.length > 0
+      ? `WHERE ${conditions.join(' AND ')}`
+      : '';
+
+    const countResult = await this.postgres.query<RowShape>(
+      `SELECT COUNT(*)::int AS total
+       FROM photos p
+       LEFT JOIN photo_product_metadata m ON m.photo_id = p.id
+       ${whereClause}`,
+      values
+    );
+    const total = Number(countResult.rows[0].total);
+
+    const dataResult = await this.postgres.query<RowShape>(
+      `${PHOTO_SELECT}
+       ${whereClause}
+       ORDER BY p.created_at DESC
+       LIMIT $${paramIdx} OFFSET $${paramIdx + 1}`,
+      [...values, pageSize, offset]
+    );
+
+    return {
+      items: dataResult.rows.map((row) => this.mapPhotoRow(row)),
+      total,
+      page,
+      pageSize,
+      totalPages: Math.ceil(total / pageSize)
+    };
+  }
+
+  async listDistinctCategories() {
+    const primary = await this.postgres.query<RowShape>(
+      `SELECT DISTINCT primary_category AS category
+       FROM photos
+       WHERE primary_category IS NOT NULL AND primary_category != ''
+       ORDER BY primary_category`
+    );
+    const secondary = await this.postgres.query<RowShape>(
+      `SELECT DISTINCT secondary_category AS category
+       FROM photos
+       WHERE secondary_category IS NOT NULL AND secondary_category != ''
+       ORDER BY secondary_category`
+    );
+    return {
+      primaryCategories: primary.rows.map((r) => String(r.category)),
+      secondaryCategories: secondary.rows.map((r) => String(r.category))
+    };
+  }
+
   async getPhoto(photoId: string) {
     const result = await this.postgres.query<RowShape>(
       `${PHOTO_SELECT}
@@ -231,6 +328,8 @@ export class PostgresRepository {
     input: {
       imageUrl: string;
       thumbnailUrl?: string;
+      primaryCategory?: string;
+      secondaryCategory?: string;
       metadata?: Partial<ProductMetadata>;
     }
   ) {
@@ -242,10 +341,16 @@ export class PostgresRepository {
     await this.postgres.query(
       `INSERT INTO photos (
          id, album_id, storage_key_original, storage_key_thumbnail, storage_key_preview,
+         primary_category, secondary_category,
          created_by, created_at, updated_at
        )
-       VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())`,
-      [photoId, albumId, uploaded.imageUrl, uploaded.thumbnailUrl, uploaded.thumbnailUrl, userId]
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())`,
+      [
+        photoId, albumId, uploaded.imageUrl, uploaded.thumbnailUrl, uploaded.thumbnailUrl,
+        this.nullIfBlank(input.primaryCategory),
+        this.nullIfBlank(input.secondaryCategory),
+        userId
+      ]
     );
 
     await this.postgres.query(
@@ -280,7 +385,14 @@ export class PostgresRepository {
     return this.getPhoto(photoId);
   }
 
-  async updatePhoto(photoId: string, input: { metadata: Partial<ProductMetadata> }) {
+  async updatePhoto(
+    photoId: string,
+    input: {
+      metadata: Partial<ProductMetadata>;
+      primaryCategory?: string;
+      secondaryCategory?: string;
+    }
+  ) {
     const current = await this.getPhoto(photoId);
     const next = this.mergeMetadata(current.metadata, input.metadata);
 
@@ -308,6 +420,23 @@ export class PostgresRepository {
         next.note
       ]
     );
+
+    if (input.primaryCategory !== undefined || input.secondaryCategory !== undefined) {
+      const setClauses: string[] = [];
+      const values: unknown[] = [photoId];
+      if (input.primaryCategory !== undefined) {
+        setClauses.push(`primary_category = $${values.length + 1}`);
+        values.push(this.nullIfBlank(input.primaryCategory));
+      }
+      if (input.secondaryCategory !== undefined) {
+        setClauses.push(`secondary_category = $${values.length + 1}`);
+        values.push(this.nullIfBlank(input.secondaryCategory));
+      }
+      await this.postgres.query(
+        `UPDATE photos SET ${setClauses.join(', ')}, updated_at = NOW() WHERE id = $1`,
+        values
+      );
+    }
 
     await this.postgres.query(`UPDATE photos SET updated_at = NOW() WHERE id = $1`, [photoId]);
     return this.getPhoto(photoId);
@@ -662,6 +791,8 @@ export class PostgresRepository {
       createdAt: String(row.createdAt),
       updatedAt: String(row.updatedAt),
       createdBy: String(row.createdBy),
+      primaryCategory: this.stringOrNull(row.primaryCategory),
+      secondaryCategory: this.stringOrNull(row.secondaryCategory),
       metadata: {
         productName: this.stringOrEmpty(row.productName),
         material: this.stringOrEmpty(row.material),

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 
 import { PostgresRepository } from '../../data/postgres.repository';
-import { ConfirmPhotoAnalysisDto, CreatePhotoDto, UpdatePhotoDto } from './photos.dto';
+import { ConfirmPhotoAnalysisDto, CreatePhotoDto, ListPhotosQueryDto, UpdatePhotoDto } from './photos.dto';
 import { PhotoAnalysisService } from './photo-analysis.service';
 
 @Injectable()
@@ -10,6 +10,21 @@ export class PhotosService {
     private readonly repository: PostgresRepository,
     private readonly analysisService: PhotoAnalysisService
   ) {}
+
+  listPhotos(query: ListPhotosQueryDto) {
+    return this.repository.listPhotos({
+      search: query.q,
+      primaryCategory: query.brand,
+      secondaryCategory: query.product,
+      albumId: query.albumId,
+      page: query.page,
+      pageSize: query.pageSize
+    });
+  }
+
+  listCategories() {
+    return this.repository.listDistinctCategories();
+  }
 
   getPhoto(photoId: string) {
     return this.repository.getPhoto(photoId);

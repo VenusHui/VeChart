@@ -1,14 +1,24 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 
 import { CurrentUser } from '../auth/current-user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { ConfirmPhotoAnalysisDto, CreatePhotoDto, UpdatePhotoDto } from './photos.dto';
+import { ConfirmPhotoAnalysisDto, CreatePhotoDto, ListPhotosQueryDto, UpdatePhotoDto } from './photos.dto';
 import { PhotosService } from './photos.service';
 
 @UseGuards(JwtAuthGuard)
 @Controller()
 export class PhotosController {
   constructor(private readonly photosService: PhotosService) {}
+
+  @Get('photos')
+  listPhotos(@Query() query: ListPhotosQueryDto) {
+    return this.photosService.listPhotos(query);
+  }
+
+  @Get('photos/categories')
+  listCategories() {
+    return this.photosService.listCategories();
+  }
 
   @Get('photos/:photoId')
   getPhoto(@Param('photoId') photoId: string) {

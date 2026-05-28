@@ -51,10 +51,10 @@ export class SeedRepository {
   ];
 
   private photos: PhotoRecord[] = [
-    this.makePhoto('photo-bag-1', 'album-bags', '托特包 A', '牛皮', 299, 128, 50),
-    this.makePhoto('photo-bag-2', 'album-bags', '斜挎包 B', '帆布', 189, 78, 80),
-    this.makePhoto('photo-pendant-1', 'album-pendants', '熊猫挂件', '合金', 59, 18, 200),
-    this.makePhoto('photo-pendant-2', 'album-pendants', '猫爪挂件', 'PVC', 39, 9, 300)
+    this.makePhoto('photo-bag-1', 'album-bags', '托特包 A', '牛皮', 299, 128, 50, '晖致', '杯套'),
+    this.makePhoto('photo-bag-2', 'album-bags', '斜挎包 B', '帆布', 189, 78, 80, '麦当劳', '杯套'),
+    this.makePhoto('photo-pendant-1', 'album-pendants', '熊猫挂件', '合金', 59, 18, 200, '莉莉丝', '睡眠'),
+    this.makePhoto('photo-pendant-2', 'album-pendants', '猫爪挂件', 'PVC', 39, 9, 300, '晖致', '睡眠')
   ];
 
   private shareDocuments: ShareDocumentRecord[] = [
@@ -169,6 +169,8 @@ export class SeedRepository {
     input: {
       imageUrl: string;
       thumbnailUrl: string;
+      primaryCategory?: string;
+      secondaryCategory?: string;
       metadata: ProductMetadata;
     }
   ) {
@@ -178,6 +180,8 @@ export class SeedRepository {
       albumId,
       imageUrl: input.imageUrl,
       thumbnailUrl: input.thumbnailUrl,
+      primaryCategory: input.primaryCategory ?? null,
+      secondaryCategory: input.secondaryCategory ?? null,
       metadata: input.metadata,
       analysis: {
         status: 'confirmed',
@@ -207,9 +211,22 @@ export class SeedRepository {
     return photo;
   }
 
-  updatePhoto(photoId: string, input: { metadata: ProductMetadata }) {
+  updatePhoto(
+    photoId: string,
+    input: {
+      metadata: ProductMetadata;
+      primaryCategory?: string;
+      secondaryCategory?: string;
+    }
+  ) {
     const photo = this.getPhoto(photoId);
     photo.metadata = input.metadata;
+    if (input.primaryCategory !== undefined) {
+      photo.primaryCategory = input.primaryCategory || null;
+    }
+    if (input.secondaryCategory !== undefined) {
+      photo.secondaryCategory = input.secondaryCategory || null;
+    }
     photo.updatedAt = new Date().toISOString();
     return photo;
   }
@@ -295,7 +312,9 @@ export class SeedRepository {
     material: string,
     marketPrice: number,
     estimatedCost: number,
-    moq: number
+    moq: number,
+    primaryCategory?: string,
+    secondaryCategory?: string
   ): PhotoRecord {
     return {
       id,
@@ -305,6 +324,8 @@ export class SeedRepository {
       createdAt: now,
       updatedAt: now,
       createdBy: 'user-admin',
+      primaryCategory: primaryCategory ?? null,
+      secondaryCategory: secondaryCategory ?? null,
       metadata: {
         productName,
         material,

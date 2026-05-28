@@ -82,6 +82,8 @@ export interface PhotoRecord {
   createdAt: string;
   updatedAt: string;
   createdBy: string;
+  primaryCategory: string | null;
+  secondaryCategory: string | null;
   metadata: ProductMetadata;
   analysis: PhotoAnalysisRecord;
 }

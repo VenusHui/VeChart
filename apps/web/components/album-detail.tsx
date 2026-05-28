@@ -299,6 +299,8 @@ export function AlbumDetail({ albumId }: { albumId: string }) {
       const created = await api.createPhoto(albumId, {
         imageUrl: fileAsDataUrl,
         thumbnailUrl: fileAsDataUrl,
+        primaryCategory: String(formData.get('primaryCategory') ?? '').trim() || undefined,
+        secondaryCategory: String(formData.get('secondaryCategory') ?? '').trim() || undefined,
         metadata: {
           productName: String(formData.get('productName') ?? '').trim(),
           productUrl: String(formData.get('productUrl') ?? '').trim(),
@@ -669,6 +671,14 @@ export function AlbumDetail({ albumId }: { albumId: string }) {
             <label>
               商品标题提示（可选）
               <input name="productName" placeholder="例如：轻奢挂件 / 女包 / 礼品挂饰" />
+            </label>
+            <label>
+              品牌（一级分类）
+              <input name="primaryCategory" placeholder="例如：晖致、麦当劳、莉莉丝" list="brand-list" autoComplete="off" />
+            </label>
+            <label>
+              产品类型（二级分类）
+              <input name="secondaryCategory" placeholder="例如：杯套、睡眠、挂件" list="product-list" autoComplete="off" />
             </label>
             <label>
               产品链接（可选）

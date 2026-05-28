@@ -47,10 +47,10 @@ export const seedAlbums: AlbumRecord[] = [
 ];
 
 export const seedPhotos: PhotoRecord[] = [
-  makePhoto('photo-bag-1', 'album-bags', '托特包 A', '牛皮', 299, 128, 50),
-  makePhoto('photo-bag-2', 'album-bags', '斜挎包 B', '帆布', 189, 78, 80),
-  makePhoto('photo-pendant-1', 'album-pendants', '熊猫挂件', '合金', 59, 18, 200),
-  makePhoto('photo-pendant-2', 'album-pendants', '猫爪挂件', 'PVC', 39, 9, 300)
+  makePhoto('photo-bag-1', 'album-bags', '托特包 A', '牛皮', 299, 128, 50, '晖致', '杯套'),
+  makePhoto('photo-bag-2', 'album-bags', '斜挎包 B', '帆布', 189, 78, 80, '麦当劳', '杯套'),
+  makePhoto('photo-pendant-1', 'album-pendants', '熊猫挂件', '合金', 59, 18, 200, '莉莉丝', '睡眠'),
+  makePhoto('photo-pendant-2', 'album-pendants', '猫爪挂件', 'PVC', 39, 9, 300, '晖致', '睡眠')
 ];
 
 export const seedShareDocuments: ShareDocumentRecord[] = [
@@ -92,7 +92,9 @@ function makePhoto(
   material: string,
   marketPrice: number,
   estimatedCost: number,
-  moq: number
+  moq: number,
+  primaryCategory?: string,
+  secondaryCategory?: string
 ): PhotoRecord {
   const metadata = makeMetadata(productName, material, marketPrice, estimatedCost, moq);
   return {
@@ -103,6 +105,8 @@ function makePhoto(
     createdAt: seedTimestamp,
     updatedAt: seedTimestamp,
     createdBy: 'user-admin',
+    primaryCategory: primaryCategory ?? null,
+    secondaryCategory: secondaryCategory ?? null,
     metadata,
     analysis: {
       status: 'confirmed',

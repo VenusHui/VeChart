@@ -91,8 +91,32 @@ export interface Photo {
   createdAt: string;
   updatedAt: string;
   createdBy: string;
+  primaryCategory: string | null;
+  secondaryCategory: string | null;
   metadata: ProductMetadata;
   analysis: PhotoAnalysis;
+}
+
+export interface PhotoListResponse {
+  items: Photo[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+export interface PhotoListParams {
+  q?: string;
+  brand?: string;
+  product?: string;
+  albumId?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface CategoryList {
+  primaryCategories: string[];
+  secondaryCategories: string[];
 }
 
 export interface ShareDocument {

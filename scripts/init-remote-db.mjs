@@ -69,13 +69,14 @@ if (rows[0].count === 0) {
     ON CONFLICT (id) DO NOTHING;
 
     INSERT INTO photos (
-      id, album_id, storage_key_original, storage_key_thumbnail, storage_key_preview, created_by
+      id, album_id, storage_key_original, storage_key_thumbnail, storage_key_preview,
+      primary_category, secondary_category, created_by
     )
     VALUES
-      ('photo-bag-1', 'album-bags', 'https://images.unsplash.com/photo-bag-1?auto=format&fit=crop&w=1200&q=80', 'https://images.unsplash.com/photo-bag-1?auto=format&fit=crop&w=600&q=80', 'https://images.unsplash.com/photo-bag-1?auto=format&fit=crop&w=600&q=80', 'user-admin'),
-      ('photo-bag-2', 'album-bags', 'https://images.unsplash.com/photo-bag-2?auto=format&fit=crop&w=1200&q=80', 'https://images.unsplash.com/photo-bag-2?auto=format&fit=crop&w=600&q=80', 'https://images.unsplash.com/photo-bag-2?auto=format&fit=crop&w=600&q=80', 'user-admin'),
-      ('photo-pendant-1', 'album-pendants', 'https://images.unsplash.com/photo-pendant-1?auto=format&fit=crop&w=1200&q=80', 'https://images.unsplash.com/photo-pendant-1?auto=format&fit=crop&w=600&q=80', 'https://images.unsplash.com/photo-pendant-1?auto=format&fit=crop&w=600&q=80', 'user-admin'),
-      ('photo-pendant-2', 'album-pendants', 'https://images.unsplash.com/photo-pendant-2?auto=format&fit=crop&w=1200&q=80', 'https://images.unsplash.com/photo-pendant-2?auto=format&fit=crop&w=600&q=80', 'https://images.unsplash.com/photo-pendant-2?auto=format&fit=crop&w=600&q=80', 'user-admin')
+      ('photo-bag-1', 'album-bags', 'https://images.unsplash.com/photo-bag-1?auto=format&fit=crop&w=1200&q=80', 'https://images.unsplash.com/photo-bag-1?auto=format&fit=crop&w=600&q=80', 'https://images.unsplash.com/photo-bag-1?auto=format&fit=crop&w=600&q=80', '晖致', '杯套', 'user-admin'),
+      ('photo-bag-2', 'album-bags', 'https://images.unsplash.com/photo-bag-2?auto=format&fit=crop&w=1200&q=80', 'https://images.unsplash.com/photo-bag-2?auto=format&fit=crop&w=600&q=80', 'https://images.unsplash.com/photo-bag-2?auto=format&fit=crop&w=600&q=80', '麦当劳', '杯套', 'user-admin'),
+      ('photo-pendant-1', 'album-pendants', 'https://images.unsplash.com/photo-pendant-1?auto=format&fit=crop&w=1200&q=80', 'https://images.unsplash.com/photo-pendant-1?auto=format&fit=crop&w=600&q=80', 'https://images.unsplash.com/photo-pendant-1?auto=format&fit=crop&w=600&q=80', '莉莉丝', '睡眠', 'user-admin'),
+      ('photo-pendant-2', 'album-pendants', 'https://images.unsplash.com/photo-pendant-2?auto=format&fit=crop&w=1200&q=80', 'https://images.unsplash.com/photo-pendant-2?auto=format&fit=crop&w=600&q=80', 'https://images.unsplash.com/photo-pendant-2?auto=format&fit=crop&w=600&q=80', '晖致', '睡眠', 'user-admin')
     ON CONFLICT (id) DO NOTHING;
 
     INSERT INTO photo_product_metadata (

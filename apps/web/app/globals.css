@@ -1066,3 +1066,133 @@ select.filter-input {
     justify-content: center;
   }
 }
+
+/* ---- Category badges ---- */
+
+.category-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+.brand-badge {
+  background: rgba(13, 110, 110, 0.12);
+  color: var(--brand);
+}
+
+.product-badge {
+  background: rgba(255, 143, 56, 0.12);
+  color: var(--accent);
+}
+
+.photo-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.15rem;
+}
+
+/* ---- Search bar ---- */
+
+.search-bar {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.search-bar input {
+  flex: 1;
+  max-width: 480px;
+  margin-top: 0;
+  padding: 0.75rem 1.1rem;
+  border-radius: 999px;
+  border: 2px solid var(--line);
+  font-size: 0.95rem;
+  background: var(--surface);
+}
+
+.search-bar input:focus {
+  border-color: var(--brand);
+  outline: none;
+}
+
+/* ---- Category filter chips ---- */
+
+.category-filter-section {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.filter-chips-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.filter-label-text {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding-top: 0.15rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+  min-width: 4.5em;
+}
+
+.filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.4rem 0.8rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  color: var(--ink);
+}
+
+.chip:hover {
+  border-color: var(--brand);
+}
+
+.chip.active {
+  background: linear-gradient(135deg, var(--brand), var(--brand-strong));
+  color: #fff;
+  border-color: transparent;
+}
+
+@media (max-width: 960px) {
+  .filter-chips-row {
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .filter-label-text {
+    min-height: auto;
+  }
+
+  .search-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .search-bar input {
+    max-width: none;
+  }
+}
