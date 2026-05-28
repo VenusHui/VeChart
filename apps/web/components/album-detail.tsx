@@ -571,7 +571,7 @@ export function AlbumDetail({ albumId }: { albumId: string }) {
                   >
                     {deletingPhotoId === photo.id ? '删除中...' : '删除'}
                   </button>
-                  <label className="checkbox">
+                  <label className="checkbox" onClick={(e) => e.stopPropagation()}>
                     <input
                       type="checkbox"
                       checked={checked}
