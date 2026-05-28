@@ -1,10 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 
 import { api } from '@/lib/api';
 import { Album } from '@/lib/types';
+
+const PAGE_SIZE = 9;
 
 export function AlbumOverview() {
   const [albums, setAlbums] = useState<Album[]>([]);
@@ -13,6 +15,7 @@ export function AlbumOverview() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [page, setPage] = useState(0);
 
   async function loadAlbums() {
     setLoading(true);
@@ -28,6 +31,19 @@ export function AlbumOverview() {
   useEffect(() => {
     void loadAlbums();
   }, []);
+
+  const totalPages = Math.max(1, Math.ceil(albums.length / PAGE_SIZE));
+  const pageItems = useMemo(
+    () => albums.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE),
+    [albums, page]
+  );
+
+  // Reset page when list shrinks past current page
+  useEffect(() => {
+    if (page >= totalPages && totalPages > 0) {
+      setPage(Math.max(0, totalPages - 1));
+    }
+  }, [totalPages, page]);
 
   async function onCreateAlbum(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -73,8 +89,11 @@ export function AlbumOverview() {
             <p className="muted">按业务分类管理产品素材，例如挂件、包包。</p>
           </div>
           {loading ? <div className="panel">加载中...</div> : null}
+          {albums.length === 0 && !loading ? (
+            <div className="panel muted">暂无相册，请创建第一个相册。</div>
+          ) : null}
           <div className="album-grid">
-            {albums.map((album) => (
+            {pageItems.map((album) => (
               <Link href={`/albums/${album.id}`} className="album-card" key={album.id}>
                 <div
                   className="album-cover"
@@ -91,6 +110,20 @@ export function AlbumOverview() {
               </Link>
             ))}
           </div>
+
+          {totalPages > 1 ? (
+            <div className="pagination-bar">
+              <span className="muted">
+                共 {albums.length} 个相册，第 {page + 1}/{totalPages} 页
+              </span>
+              <div className="pagination-buttons">
+                <button className="button button-secondary button-sm" disabled={page === 0} onClick={() => setPage(0)} type="button">首页</button>
+                <button className="button button-secondary button-sm" disabled={page === 0} onClick={() => setPage((p) => Math.max(0, p - 1))} type="button">上一页</button>
+                <button className="button button-secondary button-sm" disabled={page >= totalPages - 1} onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))} type="button">下一页</button>
+                <button className="button button-secondary button-sm" disabled={page >= totalPages - 1} onClick={() => setPage(totalPages - 1)} type="button">末页</button>
+              </div>
+            </div>
+          ) : null}
         </div>
 
         <form className="panel form" onSubmit={onCreateAlbum}>

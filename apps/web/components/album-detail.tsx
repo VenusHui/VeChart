@@ -124,6 +124,8 @@ function mergeSuggestion(photo: Photo, draft: ProductMetadata): ProductMetadata 
   };
 }
 
+const PHOTO_PAGE_SIZE = 12;
+
 function getCardDisplay(photo: Photo) {
   const suggestion = photo.analysis.suggestedMetadata;
   return {
@@ -144,6 +146,7 @@ export function AlbumDetail({ albumId }: { albumId: string }) {
   const [shareTitle, setShareTitle] = useState('');
   const [shareDescription, setShareDescription] = useState('');
   const [shareMoq, setShareMoq] = useState('');
+  const [photoPage, setPhotoPage] = useState(0);
   const [uploading, setUploading] = useState(false);
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -243,6 +246,19 @@ export function AlbumDetail({ albumId }: { albumId: string }) {
     () => photos.find((item) => item.id === selectedPhotoId) ?? null,
     [photos, selectedPhotoId]
   );
+
+  const photoTotalPages = Math.max(1, Math.ceil(photos.length / PHOTO_PAGE_SIZE));
+  const pagePhotos = useMemo(
+    () => photos.slice(photoPage * PHOTO_PAGE_SIZE, (photoPage + 1) * PHOTO_PAGE_SIZE),
+    [photos, photoPage]
+  );
+
+  // Reset photo page when list shrinks past current page
+  useEffect(() => {
+    if (photoPage >= photoTotalPages && photoTotalPages > 0) {
+      setPhotoPage(Math.max(0, photoTotalPages - 1));
+    }
+  }, [photoTotalPages, photoPage]);
 
   async function onCreateShareDocument(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -498,19 +514,6 @@ export function AlbumDetail({ albumId }: { albumId: string }) {
           <button
             className="button button-secondary"
             onClick={() => {
-              if (!selectedPhotoId) {
-                setError('请先在图片列表里选择一张图片');
-                return;
-              }
-              setShowDetailModal(true);
-            }}
-            type="button"
-          >
-            产品详情
-          </button>
-          <button
-            className="button button-secondary"
-            onClick={() => {
               if (selectedPhotoIds.length === 0) {
                 setError('请先勾选至少一张图片');
                 return;
@@ -536,7 +539,7 @@ export function AlbumDetail({ albumId }: { albumId: string }) {
           <span className="muted">已确认的图片可直接分享；待确认图片会展示 AI 状态与建议信息。</span>
         </div>
         <div className="photo-grid album-photo-grid analysis-photo-grid">
-          {photos.map((photo) => {
+          {pagePhotos.map((photo) => {
             const checked = selectedPhotoIds.includes(photo.id);
             const selected = selectedPhotoId === photo.id;
             const status = statusMeta(photo.analysis.status);
@@ -545,7 +548,10 @@ export function AlbumDetail({ albumId }: { albumId: string }) {
               <button
                 key={photo.id}
                 className={`photo-card ${selected ? 'active' : ''}`}
-                onClick={() => setSelectedPhotoId(photo.id)}
+                onClick={() => {
+                  setSelectedPhotoId(photo.id);
+                  setShowDetailModal(true);
+                }}
                 type="button"
               >
                 <div className="photo-image album-photo-image">
@@ -596,6 +602,20 @@ export function AlbumDetail({ albumId }: { albumId: string }) {
             );
           })}
         </div>
+
+        {photoTotalPages > 1 ? (
+          <div className="pagination-bar">
+            <span className="muted">
+              共 {photos.length} 张图片，第 {photoPage + 1}/{photoTotalPages} 页
+            </span>
+            <div className="pagination-buttons">
+              <button className="button button-secondary button-sm" disabled={photoPage === 0} onClick={() => setPhotoPage(0)} type="button">首页</button>
+              <button className="button button-secondary button-sm" disabled={photoPage === 0} onClick={() => setPhotoPage((p) => Math.max(0, p - 1))} type="button">上一页</button>
+              <button className="button button-secondary button-sm" disabled={photoPage >= photoTotalPages - 1} onClick={() => setPhotoPage((p) => Math.min(photoTotalPages - 1, p + 1))} type="button">下一页</button>
+              <button className="button button-secondary button-sm" disabled={photoPage >= photoTotalPages - 1} onClick={() => setPhotoPage(photoTotalPages - 1)} type="button">末页</button>
+            </div>
+          </div>
+        ) : null}
       </section>
 
       {showUploadModal ? (
