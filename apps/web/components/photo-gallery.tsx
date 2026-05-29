@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '@/lib/api';
 import { CategoryList, Photo } from '@/lib/types';
 import { AlbumOverview } from './album-overview';
+import { Combobox } from './combobox';
 
 const PAGE_SIZE = 12;
 
@@ -72,28 +73,16 @@ export function PhotoGallery() {
     void loadPhotos({ page: 1, search: searchText });
   }
 
-  function handleBrandClick(brand: string) {
-    if (selectedBrand === brand) {
-      setSelectedBrand(null);
-      setPage(1);
-      void loadPhotos({ page: 1, brand: null });
-    } else {
-      setSelectedBrand(brand);
-      setPage(1);
-      void loadPhotos({ page: 1, brand });
-    }
+  function handleBrandChange(brand: string | null) {
+    setSelectedBrand(brand);
+    setPage(1);
+    void loadPhotos({ page: 1, brand });
   }
 
-  function handleProductClick(product: string) {
-    if (selectedProduct === product) {
-      setSelectedProduct(null);
-      setPage(1);
-      void loadPhotos({ page: 1, product: null });
-    } else {
-      setSelectedProduct(product);
-      setPage(1);
-      void loadPhotos({ page: 1, product });
-    }
+  function handleProductChange(product: string | null) {
+    setSelectedProduct(product);
+    setPage(1);
+    void loadPhotos({ page: 1, product });
   }
 
   function goToPage(p: number) {
@@ -153,61 +142,21 @@ export function PhotoGallery() {
       </section>
 
       <div className="category-filter-section">
-        <div className="filter-chips-row">
+        <div className="filter-combobox-row">
           <span className="filter-label-text">品牌</span>
-          <div className="filter-chips">
-            <button
-              className={`chip${selectedBrand === null ? ' active' : ''}`}
-              onClick={() => {
-                if (selectedBrand !== null) {
-                  setSelectedBrand(null);
-                  setPage(1);
-                  void loadPhotos({ page: 1, brand: null });
-                }
-              }}
-              type="button"
-            >
-              全部
-            </button>
-            {categories.primaryCategories.map((cat) => (
-              <button
-                key={cat}
-                className={`chip${selectedBrand === cat ? ' active' : ''}`}
-                onClick={() => handleBrandClick(cat)}
-                type="button"
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="filter-chips-row">
+          <Combobox
+            options={categories.primaryCategories}
+            value={selectedBrand}
+            placeholder="全部品牌"
+            onChange={handleBrandChange}
+          />
           <span className="filter-label-text">产品类型</span>
-          <div className="filter-chips">
-            <button
-              className={`chip${selectedProduct === null ? ' active' : ''}`}
-              onClick={() => {
-                if (selectedProduct !== null) {
-                  setSelectedProduct(null);
-                  setPage(1);
-                  void loadPhotos({ page: 1, product: null });
-                }
-              }}
-              type="button"
-            >
-              全部
-            </button>
-            {categories.secondaryCategories.map((cat) => (
-              <button
-                key={cat}
-                className={`chip${selectedProduct === cat ? ' active' : ''}`}
-                onClick={() => handleProductClick(cat)}
-                type="button"
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
+          <Combobox
+            options={categories.secondaryCategories}
+            value={selectedProduct}
+            placeholder="全部类型"
+            onChange={handleProductChange}
+          />
         </div>
       </div>
 
