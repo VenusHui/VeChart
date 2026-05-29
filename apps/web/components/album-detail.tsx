@@ -162,6 +162,8 @@ export function AlbumDetail({ albumId }: { albumId: string }) {
     dataUrl: string;
   } | null>(null);
   const [detailDraft, setDetailDraft] = useState<ProductMetadata>({ ...emptyDraft });
+  const [detailPrimaryCategory, setDetailPrimaryCategory] = useState('');
+  const [detailSecondaryCategory, setDetailSecondaryCategory] = useState('');
   const [showCostDetail, setShowCostDetail] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -224,6 +226,8 @@ export function AlbumDetail({ albumId }: { albumId: string }) {
     }
     const photo = photos.find((item) => item.id === selectedPhotoId) ?? null;
     setDetailDraft(makeDraftFromPhoto(photo));
+    setDetailPrimaryCategory(photo?.primaryCategory ?? '');
+    setDetailSecondaryCategory(photo?.secondaryCategory ?? '');
     setShowCostDetail(false);
   }, [photos, selectedPhotoId, showDetailModal]);
 
@@ -475,7 +479,11 @@ export function AlbumDetail({ albumId }: { albumId: string }) {
       if (confirmAnalysis) {
         await api.confirmPhotoAnalysis(selectedPhoto.id, { metadata: detailDraft });
       } else {
-        await api.updatePhoto(selectedPhoto.id, { metadata: detailDraft });
+        await api.updatePhoto(selectedPhoto.id, {
+          metadata: detailDraft,
+          primaryCategory: detailPrimaryCategory.trim() || undefined,
+          secondaryCategory: detailSecondaryCategory.trim() || undefined
+        });
       }
       await loadPhotos();
       setShowDetailModal(false);
@@ -949,6 +957,22 @@ export function AlbumDetail({ albumId }: { albumId: string }) {
                     <span className="muted">这里保存的是最终确认后的字段，分享文档将使用这部分内容。</span>
                   </div>
                   <div className="form-grid-tight">
+                    <label>
+                      品牌（一级分类）
+                      <input
+                        value={detailPrimaryCategory}
+                        onChange={(e) => setDetailPrimaryCategory(e.target.value)}
+                        placeholder="例如：晖致、麦当劳"
+                      />
+                    </label>
+                    <label>
+                      产品类型（二级分类）
+                      <input
+                        value={detailSecondaryCategory}
+                        onChange={(e) => setDetailSecondaryCategory(e.target.value)}
+                        placeholder="例如：杯套、睡眠"
+                      />
+                    </label>
                     <label>
                       产品名称
                       <input

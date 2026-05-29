@@ -126,38 +126,30 @@ export function PhotoGallery() {
         </div>
       </section>
 
-      <section className="section-head">
-        <div className="search-bar">
-          <input
-            placeholder="搜索产品名称、材质、品牌..."
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') handleSearch(); }}
-          />
-          <button className="button button-sm" onClick={handleSearch} type="button">搜索</button>
-        </div>
+      <div className="filter-bar-row">
+        <input
+          className="filter-input filter-input-search"
+          placeholder="搜索产品名称、材质..."
+          value={searchText}
+          onChange={(e) => setSearchText(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') handleSearch(); }}
+        />
+        <Combobox
+          options={categories.primaryCategories}
+          value={selectedBrand}
+          placeholder="全部品牌"
+          onChange={handleBrandChange}
+        />
+        <Combobox
+          options={categories.secondaryCategories}
+          value={selectedProduct}
+          placeholder="全部类型"
+          onChange={handleProductChange}
+        />
+        <button className="button button-sm" onClick={handleSearch} type="button">搜索</button>
         <button className="button button-secondary button-sm" onClick={() => setViewMode('album')} type="button">
           相册浏览
         </button>
-      </section>
-
-      <div className="category-filter-section">
-        <div className="filter-combobox-row">
-          <span className="filter-label-text">品牌</span>
-          <Combobox
-            options={categories.primaryCategories}
-            value={selectedBrand}
-            placeholder="全部品牌"
-            onChange={handleBrandChange}
-          />
-          <span className="filter-label-text">产品类型</span>
-          <Combobox
-            options={categories.secondaryCategories}
-            value={selectedProduct}
-            placeholder="全部类型"
-            onChange={handleProductChange}
-          />
-        </div>
       </div>
 
       {error ? <div className="panel error-text">{error}</div> : null}
